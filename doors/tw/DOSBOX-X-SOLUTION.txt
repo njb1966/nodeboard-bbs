@@ -1,0 +1,129 @@
+================================================================================
+RECOMMENDED SOLUTION: Use DOSBox-X
+================================================================================
+
+If you're having SHARE.EXE version issues, the BEST solution is to use
+DOSBox-X instead of regular DOSBox.
+
+================================================================================
+WHY DOSBOX-X?
+================================================================================
+
+DOSBox-X is an enhanced fork of DOSBox with:
+  ✓ Built-in SHARE support (no separate SHARE.EXE needed)
+  ✓ Better MS-DOS compatibility
+  ✓ More accurate DOS emulation
+  ✓ Better support for BBS door games
+  ✓ Same configuration format as DOSBox
+
+================================================================================
+HOW TO INSTALL DOSBOX-X
+================================================================================
+
+1. Download DOSBox-X:
+   Visit: https://dosbox-x.com/
+
+   Direct Windows download:
+   https://github.com/joncampbell123/dosbox-x/releases
+
+2. Install DOSBox-X:
+   - Extract or install to a folder (e.g., C:\DOSBox-X\)
+   - Note the path to dosbox-x.exe
+
+3. Test it:
+   Open command prompt and run:
+   "C:\DOSBox-X\dosbox-x.exe" -version
+
+================================================================================
+USING DOSBOX-X WITH TRADEWARS
+================================================================================
+
+OPTION A: Add DOSBox-X to PATH (Recommended)
+  1. Add DOSBox-X folder to Windows PATH (same as regular DOSBox)
+  2. Rename dosbox-x.exe to dosbox.exe (or create alias)
+  3. All existing scripts will work automatically
+
+OPTION B: Update launch scripts
+  Edit these files and replace:
+    dosbox.exe
+  With:
+    "C:\DOSBox-X\dosbox-x.exe"
+
+  Files to edit:
+  - launch-tw.bat
+  - setup-tw.bat
+  - bigbang-tw.bat
+  - test-tw.bat
+
+OPTION C: Use create-dosbox-x-launcher.bat
+  Run the included script that creates DOSBox-X specific launchers
+
+================================================================================
+DOSBOX-X CONFIGURATION
+================================================================================
+
+The existing dosbox-tw.conf should work with DOSBox-X.
+
+DOSBox-X includes built-in SHARE support, so the [autoexec] section
+in dosbox-tw.conf already loads SHARE properly.
+
+If you still have issues, you can enable integrated DOS in DOSBox-X:
+  Edit dosbox-tw.conf, find [dosbox] section, add:
+    integrated dosver = 6.22
+
+================================================================================
+AFTER INSTALLING DOSBOX-X
+================================================================================
+
+1. Remove the FreeDOS SHARE.EXE (if present):
+   del SHARE.EXE
+
+2. Update dosbox-tw.conf to use DOSBox-X's built-in SHARE:
+   The [autoexec] section already has:
+     SHARE.EXE
+   This will use DOSBox-X's built-in SHARE command
+
+3. Run setup:
+   setup-tw.bat
+
+   (Will use DOSBox-X if it's in PATH or configured)
+
+4. Configure TradeWars in TEDIT as usual
+
+5. Test:
+   test-tw.bat
+
+================================================================================
+CHECKING IF YOU'RE USING DOSBOX-X
+================================================================================
+
+Run DOSBox/DOSBox-X and type at the C:\> prompt:
+  VER
+
+DOSBox shows: "DOSBox version X.XX.X"
+DOSBox-X shows: "DOSBox-X version X.XX.X" or reports as MS-DOS 6.22
+
+================================================================================
+LINKS
+================================================================================
+
+DOSBox-X Official Site:
+  https://dosbox-x.com/
+
+DOSBox-X GitHub (Downloads):
+  https://github.com/joncampbell123/dosbox-x/releases
+
+DOSBox-X Wiki:
+  https://dosbox-x.com/wiki/
+
+================================================================================
+BOTTOM LINE
+================================================================================
+
+For TradeWars 2002 and BBS door games, DOSBox-X is HIGHLY RECOMMENDED
+over regular DOSBox due to better DOS compatibility and built-in SHARE.
+
+Regular DOSBox: Good for DOS games
+DOSBox-X:      Better for BBS doors, multi-node games, and business software
+
+================================================================================

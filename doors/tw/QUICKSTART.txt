@@ -1,0 +1,169 @@
+================================================================================
+TradeWars 2002 - Quick Start Guide
+================================================================================
+
+PROBLEM: Game shuts down immediately with "Node configuration error"
+SOLUTION: You need to configure TradeWars before first use!
+
+PROBLEM: TEDIT shows "SHARE.EXE not loaded or unresponsive" and exits to C:\ prompt
+SOLUTION: SHARE.EXE is required! See solutions below.
+
+PROBLEM: "SHARE wrong version" or SHARE compatibility errors
+SOLUTION: Use DOSBox-X instead of regular DOSBox (see RECOMMENDED PATH below)
+
+================================================================================
+RECOMMENDED PATH: Use DOSBox-X (Easiest!)
+================================================================================
+
+DOSBox-X has built-in SHARE support - no version issues!
+
+1. Download DOSBox-X from: https://dosbox-x.com/
+2. Install it (note the installation path)
+3. Run: setup-tw-dosbox-x.bat
+4. Configure in TEDIT (see STEP 2 below)
+5. Run: test-tw-dosbox-x.bat
+
+DONE! No SHARE.EXE errors, everything just works!
+
+See DOSBOX-X-SOLUTION.txt for detailed DOSBox-X instructions.
+
+================================================================================
+ALTERNATIVE PATH: Use Regular DOSBox + SHARE.EXE
+================================================================================
+
+If you prefer regular DOSBox, follow these steps:
+
+================================================================================
+STEP 0: DOWNLOAD SHARE.EXE (REQUIRED - ONE TIME ONLY)
+================================================================================
+
+TradeWars requires SHARE.EXE to run. Download it automatically with:
+
+    powershell -ExecutionPolicy Bypass -File download-share.ps1
+
+This downloads SHARE.EXE from the FreeDOS repository (legitimate DOS utility).
+
+OR download manually:
+    1. Visit: https://www.ibiblio.org/pub/micro/pc-stuff/freedos/files/dos/share/
+    2. Download share.zip
+    3. Extract SHARE.EXE to the doors/tw/ folder
+
+================================================================================
+STEP 1: RUN THE CONFIGURATION EDITOR
+================================================================================
+
+After SHARE.EXE is in place, run:
+    setup-tw.bat
+
+This will launch TEDIT.EXE (the TradeWars configuration editor)
+
+================================================================================
+STEP 2: CONFIGURE THE GAME IN TEDIT
+================================================================================
+
+When TEDIT starts, you'll see a menu. Here's what to do:
+
+1. SELECT "C" - CONFIGURE NODES
+   - Set number of nodes: 1 (or more if multi-user)
+   - Configure Node 1:
+     * Node Type: LOCAL (for testing) or REMOTE (for BBS)
+     * COM Port: N/A (if local)
+     * Save settings
+
+2. SELECT "G" - GAME PARAMETERS
+   - Number of Sectors: 1000 (default is good)
+   - Number of Ports: 20 (default is good)
+   - Daily Maint Hour: 0 (midnight)
+   - Review other settings, defaults are usually fine
+   - Save settings
+
+3. SELECT "B" - BBS INTERFACE
+   - BBS Type: GENERIC (for NodeBoard BBS)
+   - Save settings
+
+4. SELECT "Q" - QUIT AND SAVE
+   - This saves all your changes
+
+================================================================================
+STEP 3: INITIALIZE THE UNIVERSE (FIRST TIME ONLY)
+================================================================================
+
+If this is a brand new game, you need to create the universe:
+
+Run from the tw folder:
+    bigbang-tw.bat
+
+This will:
+- Generate all sectors
+- Create ports
+- Initialize the game universe
+
+You only need to do this ONCE when setting up a new game.
+
+================================================================================
+STEP 4: TEST THE GAME
+================================================================================
+
+Now try running:
+    test-tw.bat
+
+The game should start and show the TradeWars main menu!
+
+If you see "Node configuration error" still:
+- Make sure you saved in TEDIT (press Q then Y to save)
+- Verify TWNODE.DAT was created/updated
+- Check TWERR.LOG for specific errors
+
+================================================================================
+STEP 5: PLAY THE GAME
+================================================================================
+
+Once working, you can:
+- Test locally: test-tw.bat
+- Play from BBS: Connect via telnet and select Door Games menu
+
+================================================================================
+CONFIGURATION FILES
+================================================================================
+
+After configuration, these files will be created/updated:
+- TWCFIG.DAT   - Main configuration
+- TWNODE.DAT   - Node settings
+- TWUSER.DAT   - Player database
+- TWSHIP.DAT   - Ship data
+- TWSECT.DAT   - Sector data
+- TWPORT.DAT   - Port data
+
+================================================================================
+TROUBLESHOOTING
+================================================================================
+
+ERROR: "Node configuration error"
+  -> Run setup-tw.bat and configure nodes in TEDIT
+
+ERROR: "Not enough memory to continue"
+  -> DOSBox needs more memory. Already configured in dosbox-tw.conf
+
+ERROR: Game exits immediately
+  -> Check TWERR.LOG for specific error messages
+  -> Make sure you ran BIGBANG.EXE to initialize universe
+
+ERROR: Can't see the game when connecting from BBS
+  -> This is expected - see TRADEWARS-SETUP.md in root folder
+  -> Current implementation opens separate DOSBox window
+  -> For BBS integration, need GameSrv or similar telnet-to-DOS bridge
+
+================================================================================
+MORE HELP
+================================================================================
+
+See these files in the doors/tw/ folder:
+- TWINSTR.DOC  - Player instructions
+- TWSYSOP.DOC  - Sysop guide (detailed configuration)
+- WHATSNEW.DOC - Version information
+
+Or see:
+- ../TRADEWARS-SETUP.md (in main BBS folder)
+- README-SETUP.md (in this folder)
+
+================================================================================

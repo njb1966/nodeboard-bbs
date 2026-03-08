@@ -1,0 +1,53 @@
+[Version]
+Major Version=3
+Minor Version=9
+[General Info]
+Gold Enabled=False
+Creation Day=12/26/37
+Internal Aliens=True
+Internal Ferrengi=True
+Closed Game=False
+Password Game=False
+Password Editor=False
+Show Stardock=True
+Ship Delay Mode=Third
+Ether Delay Mode=1 Sec
+Max Commands=4
+Turn Base=250 Turns
+Time Online=Unlimited
+Inactive Time=300 Min
+Last Bust Clear Day=12/26/37
+[Startup]
+Initial Fighters=30
+Initial Credits=300
+Initial Holds=20
+New Player Planets=True
+[Settings]
+Days Til Deletion=30 Days
+Colonist Regen Rate=750
+Max Planet Sector=5
+Max Corp Members=5
+FedSpace Ship Limit=5
+Photon Missile Duration=0 Sec
+Cloak Fail Percent=3%
+Debris Loss Percent=3%
+Trade Percent=60%
+Steal Buy=True
+Production Rate=5
+Multiple Photons=False
+Clear Bust Days=7 Days
+[Universe]
+Sectors=1000
+Users=200
+Ships=800
+Ports=400
+Planets=200
+Ferrengi Home Base=256
+StarDock Sector=334
+Second Port Zero Location=890
+Third Port Zero Location=202
+Max Course Length=45
+[Tournament]
+Tournament Mode=0
+Days To Enter=0 Days
+Max Times Blown Up=0

@@ -1,0 +1,97 @@
+================================================================================
+About the SHARE.EXE Error in TradeWars 2002
+================================================================================
+
+ERROR MESSAGE:
+"SHARE.EXE not loaded or unresponsive"
+
+================================================================================
+WHAT IS SHARE.EXE?
+================================================================================
+
+SHARE.EXE was a DOS utility that provided file-locking and sharing capabilities
+for multi-user environments. TradeWars checks for it at startup.
+
+================================================================================
+DO YOU NEED IT?
+================================================================================
+
+NO - For single-user local testing
+  - You can safely ignore the warning
+  - Press ENTER when you see the error in TEDIT
+  - The program will continue to work
+  - File locking isn't needed for 1 user
+
+YES - For multi-node BBS operations
+  - Multiple users accessing the game simultaneously
+  - Prevents data corruption with concurrent access
+  - Required for production BBS use
+
+================================================================================
+HOW TO BYPASS THE WARNING (Single User)
+================================================================================
+
+When you see the SHARE.EXE error in TEDIT or TradeWars:
+
+1. Just press ENTER to continue
+2. The program will work normally for local/single-user testing
+3. Configure the game as usual
+
+This is the RECOMMENDED approach for testing and setup!
+
+================================================================================
+HOW TO ADD SHARE.EXE (If Really Needed)
+================================================================================
+
+If you really need SHARE.EXE for multi-node operations:
+
+OPTION 1: Download from FreeDOS
+  1. Visit: https://www.ibiblio.org/pub/micro/pc-stuff/freedos/files/dos/share/
+  2. Download SHARE.EXE
+  3. Place it in: E:\custombbs\doors\tw\
+  4. It will be available in DOSBox when mounted
+
+OPTION 2: Extract from Windows
+  Windows includes SHARE.EXE in older versions:
+  - Look in: C:\Windows\System32\SHARE.EXE (Windows 9x/ME)
+  - Copy to: E:\custombbs\doors\tw\
+
+OPTION 3: Use DOSBox-X
+  DOSBox-X (enhanced DOSBox) includes SHARE support:
+  - Download from: https://dosbox-x.com/
+  - Replace regular DOSBox with DOSBox-X
+  - SHARE command will work
+
+================================================================================
+UPDATING SCRIPTS TO USE SHARE.EXE
+================================================================================
+
+After placing SHARE.EXE in the tw folder, edit dosbox-tw.conf:
+
+Change the [autoexec] section to:
+
+[autoexec]
+@echo off
+mount c: .
+c:
+SHARE.EXE
+TW2002.EXE /N1
+exit
+
+And update setup-tw.bat to:
+    dosbox -c "mount c: ." -c "c:" -c "SHARE.EXE" -c "TEDIT.EXE"
+
+================================================================================
+RECOMMENDED APPROACH
+================================================================================
+
+For most users setting up TradeWars for testing or single-user:
+
+1. IGNORE the SHARE.EXE warning
+2. Press ENTER when prompted
+3. Configure and play normally
+4. Only add SHARE.EXE if you're running a production BBS with multiple nodes
+
+The game works fine without SHARE for single-user scenarios!
+
+================================================================================

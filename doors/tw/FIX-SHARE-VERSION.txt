@@ -1,0 +1,120 @@
+================================================================================
+Fixing "SHARE Wrong Version" Error
+================================================================================
+
+ERROR: "SHARE.EXE wrong version" or "Incorrect version of SHARE"
+CAUSE: FreeDOS SHARE.EXE is not fully compatible with TradeWars 2002
+
+================================================================================
+SOLUTION 1: Use DOSBox-X (RECOMMENDED - EASIEST)
+================================================================================
+
+DOSBox-X is an enhanced DOSBox with built-in SHARE support.
+This is the BEST and EASIEST solution!
+
+STEP 1: Download DOSBox-X
+  Visit: https://dosbox-x.com/
+  Or: https://github.com/joncampbell123/dosbox-x/releases
+  Download the Windows version (installer or portable)
+
+STEP 2: Install DOSBox-X
+  - Run installer OR extract portable version
+  - Note where it installs (e.g., C:\DOSBox-X\)
+
+STEP 3: Run TradeWars with DOSBox-X
+  From doors/tw folder, run:
+    setup-tw-dosbox-x.bat     (Configure game)
+    test-tw-dosbox-x.bat      (Test game)
+
+  These scripts automatically find and use DOSBox-X!
+
+STEP 4: (Optional) Make DOSBox-X default
+  Add to Windows PATH:
+    C:\DOSBox-X\
+
+  Then all the regular scripts (setup-tw.bat, test-tw.bat, etc.)
+  can be updated to use dosbox-x.exe instead of dosbox.exe
+
+RESULT: ✓ No SHARE.EXE errors
+        ✓ Better DOS compatibility
+        ✓ Works perfectly with TradeWars
+
+================================================================================
+SOLUTION 2: Get MS-DOS 6.22 SHARE.EXE (More Complex)
+================================================================================
+
+If you must use regular DOSBox, you need the real MS-DOS 6.22 SHARE.EXE:
+
+OPTION A: Download MS-DOS 6.22
+  1. Visit: https://winworldpc.com/product/ms-dos/622
+  2. Download "MS-DOS 6.22" or "MS-DOS 6.22 Supplemental Disk"
+  3. Extract the disk images
+  4. Find SHARE.EXE
+  5. Copy to: E:\custombbs\doors\tw\
+  6. Delete the FreeDOS version first!
+
+OPTION B: Search Online Archives
+  Search for: "MS-DOS 6.22 SHARE.EXE download"
+  Find a legitimate source
+  Download SHARE.EXE (should be around 10KB)
+  Place in: E:\custombbs\doors\tw\
+
+VERIFICATION:
+  MS-DOS 6.22 SHARE.EXE is approximately 10,912 bytes
+  FreeDOS SHARE.EXE is different size
+
+After replacing SHARE.EXE:
+  Run: setup-tw.bat
+
+================================================================================
+SOLUTION 3: Configure DOSBox to Report DOS 6.22
+================================================================================
+
+I've already updated dosbox-tw.conf to report as DOS 6.22:
+  [dos]
+  ver=6.22
+
+This helps compatibility but may not fully solve SHARE version issues.
+
+================================================================================
+COMPARISON OF SOLUTIONS
+================================================================================
+
+DOSBox-X:
+  ✓ Easiest - just install and run
+  ✓ Built-in SHARE - no separate file needed
+  ✓ Better DOS compatibility overall
+  ✓ Same config files work (dosbox-tw.conf)
+  ✓ RECOMMENDED SOLUTION
+
+MS-DOS 6.22 SHARE.EXE:
+  - Harder to obtain legally
+  - Must find exact right version
+  - May still have compatibility issues
+  - Works with regular DOSBox
+
+================================================================================
+RECOMMENDED ACTION
+================================================================================
+
+1. Download and install DOSBox-X from https://dosbox-x.com/
+
+2. Run these scripts:
+   setup-tw-dosbox-x.bat   - Configure TradeWars
+   test-tw-dosbox-x.bat    - Test the game
+
+3. Enjoy TradeWars without SHARE errors!
+
+See DOSBOX-X-SOLUTION.txt for more details.
+
+================================================================================
+NEED HELP?
+================================================================================
+
+For DOSBox-X installation help:
+  https://dosbox-x.com/wiki/Guide%3AInstallation-in-Windows
+
+For TradeWars setup questions:
+  See QUICKSTART.txt in this folder
+
+================================================================================

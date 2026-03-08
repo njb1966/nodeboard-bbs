@@ -1,0 +1,72 @@
+================================================================================
+                        TRADEWARS 2002 SETUP
+                          START HERE!
+================================================================================
+
+Got "SHARE wrong version" or SHARE compatibility errors?
+Here's the EASIEST solution:
+
+================================================================================
+QUICK FIX: Use DOSBox-X
+================================================================================
+
+1. Download DOSBox-X from: https://dosbox-x.com/
+   (Click "Download" button, get Windows version)
+
+2. Install it
+   (Default location is fine: C:\DOSBox-X\)
+
+3. Run from this folder (doors/tw):
+   setup-tw-dosbox-x.bat
+
+4. Configure TradeWars in TEDIT:
+   - Press C: Set 1 node, LOCAL type
+   - Press G: Accept defaults
+   - Press B: Select GENERIC
+   - Press Q: Save and quit
+
+5. Test it:
+   test-tw-dosbox-x.bat
+
+DONE! Game should work perfectly!
+
+================================================================================
+WHY DOSBOX-X?
+================================================================================
+
+Regular DOSBox:     Good for games, basic DOS
+DOSBox-X:          Better DOS compatibility, built-in SHARE, perfect for BBS doors
+
+TradeWars needs SHARE.EXE. Regular DOSBox requires downloading it separately
+and dealing with version issues. DOSBox-X has it built-in - just works!
+
+================================================================================
+FILES IN THIS FOLDER
+================================================================================
+
+SETUP SCRIPTS:
+  setup-tw-dosbox-x.bat     - Configure TradeWars (DOSBox-X)
+  test-tw-dosbox-x.bat      - Test the game (DOSBox-X)
+  setup-tw.bat              - Configure (regular DOSBox + SHARE.EXE)
+  test-tw.bat               - Test (regular DOSBox + SHARE.EXE)
+
+DOCUMENTATION:
+  QUICKSTART.txt            - Step-by-step setup guide
+  FIX-SHARE-VERSION.txt     - Solutions for SHARE errors
+  DOSBOX-X-SOLUTION.txt     - Detailed DOSBox-X info
+  README-SETUP.md           - Complete setup documentation
+
+CONFIGURATION:
+  dosbox-tw.conf            - DOSBox/DOSBox-X configuration
+  TEDIT.EXE                 - TradeWars configuration editor
+  TW2002.EXE                - TradeWars game
+
+================================================================================
+STILL HAVING ISSUES?
+================================================================================
+
+See: FIX-SHARE-VERSION.txt
+Or:  QUICKSTART.txt
+Or:  DOSBOX-X-SOLUTION.txt
+
+================================================================================

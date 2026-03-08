@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NodeBoard BBS</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <div class="terminal">
+      <div class="terminal-header">
+        <div class="terminal-title">NodeBoard BBS - Web Interface</div>
+        <div class="terminal-controls">
+          <span class="control">─</span>
+          <span class="control">□</span>
+          <span class="control">×</span>
+        </div>
+      </div>
+
+      <!-- Tab Navigation -->
+      <div class="tab-nav">
+        <button class="tab-button active" data-tab="about">About</button>
+        <button class="tab-button" data-tab="connect">Connect</button>
+        <button class="tab-button" data-tab="features">Features</button>
+        <button class="tab-button" data-tab="terminal">Web Terminal</button>
+      </div>
+
+      <div class="terminal-body">
+        <!-- About Tab -->
+        <div class="tab-content active" id="about-tab">
+          <div class="welcome-screen">
+            <pre class="ascii-art">
+╔═══════════════════════════════════════════════════════════════════════════╗
+║                                                                           ║
+║                  <span class="text-yellow">▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄</span>                  ║
+║               <span class="text-red">███╗   ██╗ ██████╗ ██████╗ ███████╗</span>                ║
+║               <span class="text-red">████╗  ██║██╔═══██╗██╔══██╗██╔════╝</span>                ║
+║               <span class="text-red">██╔██╗ ██║██║   ██║██║  ██║█████╗  </span>                ║
+║               <span class="text-red">██║╚██╗██║██║   ██║██║  ██║██╔══╝  </span>                ║
+║               <span class="text-red">██║ ╚████║╚██████╔╝██████╔╝███████╗</span>                ║
+║               <span class="text-red">╚═╝  ╚═══╝ ╚═════╝ ╚═════╝ ╚══════╝</span>                ║
+║                                                                           ║
+║              <span class="text-red">██████╗  ██████╗  █████╗ ██████╗ ██████╗</span>               ║
+║              <span class="text-red">██╔══██╗██╔═══██╗██╔══██╗██╔══██╗██╔══██╗</span>              ║
+║              <span class="text-red">██████╔╝██║   ██║███████║██████╔╝██║  ██║</span>              ║
+║              <span class="text-red">██╔══██╗██║   ██║██╔══██║██╔══██╗██║  ██║</span>              ║
+║              <span class="text-red">██████╔╝╚██████╔╝██║  ██║██║  ██║██████╔╝</span>              ║
+║              <span class="text-red">╚═════╝  ╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═╝╚═════╝</span>               ║
+║                  <span class="text-yellow">▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀</span>                  ║
+║                                                                           ║
+║                         <span class="text-green">NODEBOARD BBS SYSTEM</span>                               ║
+║                            <span class="text-white">Version 1.1</span>                                      ║
+║                                                                           ║
+╚═══════════════════════════════════════════════════════════════════════════╝
+            </pre>
+
+            <div class="info-section">
+              <h2><span class="text-cyan">╔═══════════════════════════════════════════════════════╗</span></h2>
+              <p><span class="text-cyan">║</span> <span class="text-yellow">About NodeBoard BBS</span>                                  <span class="text-cyan">║</span></p>
+              <h2><span class="text-cyan">╚═══════════════════════════════════════════════════════╝</span></h2>
+
+              <div class="info-text">
+                <p class="text-white">
+                  Welcome to <span class="text-green">NodeBoard BBS</span>, a modern implementation of
+                  classic 1990s Bulletin Board Systems. Experience the nostalgia of the
+                  pre-internet era with contemporary technology.
+                </p>
+                <p class="text-white">
+                  Inspired by classic 1990s BBS systems, built with Node.js. NodeBoard brings
+                  the community-driven spirit of old-school BBSs to the modern web.
+                </p>
+                <p class="text-yellow">
+                  Connect via traditional telnet clients or use our web-based terminal!
+                </p>
+              </div>
+            </div>
+
+            <div class="stats-grid">
+              <div class="stat-box">
+                <span class="text-cyan">╔═════════════════╗</span><br>
+                <span class="text-cyan">║</span> <span class="text-yellow">System Info</span>     <span class="text-cyan">║</span><br>
+                <span class="text-cyan">╠═════════════════╣</span><br>
+                <span class="text-cyan">║</span> <span class="text-white">Version:</span> <span class="text-green">1.1</span>   <span class="text-cyan">║</span><br>
+                <span class="text-cyan">║</span> <span class="text-white">Status:</span> <span class="text-green">Online</span> <span class="text-cyan">║</span><br>
+                <span class="text-cyan">╚═════════════════╝</span>
+              </div>
+
+              <div class="stat-box">
+                <span class="text-cyan">╔═══════════════════╗</span><br>
+                <span class="text-cyan">║</span> <span class="text-yellow">Sysop</span>             <span class="text-cyan">║</span><br>
+                <span class="text-cyan">╠═══════════════════╣</span><br>
+                <span class="text-cyan">║</span> <span class="text-white" id="sysop-name">Soulthreader</span> <span class="text-cyan">║</span><br>
+                <span class="text-cyan">╚═══════════════════╝</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Connect Tab -->
+        <div class="tab-content" id="connect-tab">
+          <div class="section-content">
+            <h2><span class="text-cyan">╔═══════════════════════════════════════════════════════╗</span></h2>
+            <p><span class="text-cyan">║</span> <span class="text-yellow">Connection Information</span>                               <span class="text-cyan">║</span></p>
+            <h2><span class="text-cyan">╚═══════════════════════════════════════════════════════╝</span></h2>
+
+            <div class="connect-methods">
+              <div class="connect-box">
+                <h3 class="text-green">╔════════════════════════════════════════╗</h3>
+                <h3 class="text-green">║ Method 1: Traditional Telnet Client    ║</h3>
+                <h3 class="text-green">╚════════════════════════════════════════╝</h3>
+
+                <p class="text-white">Use any telnet client to connect:</p>
+
+                <div class="code-box">
+                  <span class="text-cyan">$ telnet <span id="telnet-host">localhost</span> <span id="telnet-port">2323</span></span>
+                </div>
+
+                <h4 class="text-yellow">Recommended Clients:</h4>
+                <ul class="client-list">
+                  <li><span class="text-white">• <span class="text-green">SyncTERM</span> - Modern BBS terminal</span></li>
+                  <li><span class="text-white">• <span class="text-green">PuTTY</span> - Windows telnet/SSH client</span></li>
+                  <li><span class="text-white">• <span class="text-green">NetRunner</span> - Classic BBS client</span></li>
+                  <li><span class="text-white">• <span class="text-green">Terminal</span> - Built-in on Mac/Linux</span></li>
+                </ul>
+              </div>
+
+              <div class="connect-box">
+                <h3 class="text-green">╔════════════════════════════════════════╗</h3>
+                <h3 class="text-green">║ Method 2: Web Terminal (This Site)     ║</h3>
+                <h3 class="text-green">╚════════════════════════════════════════╝</h3>
+
+                <p class="text-white">
+                  Click the <span class="text-cyan">"Web Terminal"</span> tab above to connect
+                  directly from your browser - no additional software needed!
+                </p>
+
+                <button class="connect-button" onclick="switchTab('terminal')">
+                  <span class="text-yellow">» Connect Now via Web Terminal «</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Features Tab -->
+        <div class="tab-content" id="features-tab">
+          <div class="section-content">
+            <h2><span class="text-cyan">╔═══════════════════════════════════════════════════════╗</span></h2>
+            <p><span class="text-cyan">║</span> <span class="text-yellow">NodeBoard BBS Features</span>                               <span class="text-cyan">║</span></p>
+            <h2><span class="text-cyan">╚═══════════════════════════════════════════════════════╝</span></h2>
+
+            <div class="features-grid">
+              <div class="feature-box">
+                <h3 class="text-green">╔═══════════════════════════╗</h3>
+                <h3 class="text-green">║ 📬 Communication          ║</h3>
+                <h3 class="text-green">╚═══════════════════════════╝</h3>
+                <ul class="feature-list">
+                  <li><span class="text-cyan">•</span> <span class="text-white">Message Forums</span></li>
+                  <li><span class="text-cyan">•</span> <span class="text-white">Threaded Discussions</span></li>
+                  <li><span class="text-cyan">•</span> <span class="text-white">Private Messaging</span></li>
+                  <li><span class="text-cyan">•</span> <span class="text-white">System Bulletins</span></li>
+                  <li><span class="text-cyan">•</span> <span class="text-white">Who's Online</span></li>
+                </ul>
+              </div>
+
+              <div class="feature-box">
+                <h3 class="text-green">╔═══════════════════════════╗</h3>
+                <h3 class="text-green">║ 📁 File Areas             ║</h3>
+                <h3 class="text-green">╚═══════════════════════════╝</h3>
+                <ul class="feature-list">
+                  <li><span class="text-cyan">•</span> <span class="text-white">File Upload/Download</span></li>
+                  <li><span class="text-cyan">•</span> <span class="text-white">Multiple Categories</span></li>
+                  <li><span class="text-cyan">•</span> <span class="text-white">File Descriptions</span></li>
+                  <li><span class="text-cyan">•</span> <span class="text-white">Download Tracking</span></li>
+                  <li><span class="text-cyan">•</span> <span class="text-white">Upload Credits</span></li>
+                </ul>
+              </div>
+
+              <div class="feature-box">
+                <h3 class="text-green">╔═══════════════════════════╗</h3>
+                <h3 class="text-green">║ 🎮 Entertainment          ║</h3>
+                <h3 class="text-green">╚═══════════════════════════╝</h3>
+                <ul class="feature-list">
+                  <li><span class="text-cyan">•</span> <span class="text-white">DOOR Games</span></li>
+                  <li><span class="text-cyan">•</span> <span class="text-white">TradeWars Support</span></li>
+                  <li><span class="text-cyan">•</span> <span class="text-white">Legend of the Red Dragon</span></li>
+                  <li><span class="text-cyan">•</span> <span class="text-white">Game Statistics</span></li>
+                  <li><span class="text-cyan">•</span> <span class="text-white">Leaderboards</span></li>
+                </ul>
+              </div>
+
+              <div class="feature-box">
+                <h3 class="text-green">╔═══════════════════════════╗</h3>
+                <h3 class="text-green">║ 👥 User System            ║</h3>
+                <h3 class="text-green">╚═══════════════════════════╝</h3>
+                <ul class="feature-list">
+                  <li><span class="text-cyan">•</span> <span class="text-white">User Profiles</span></li>
+                  <li><span class="text-cyan">•</span> <span class="text-white">User Statistics</span></li>
+                  <li><span class="text-cyan">•</span> <span class="text-white">Security Levels</span></li>
+                  <li><span class="text-cyan">•</span> <span class="text-white">Time Tracking</span></li>
+                  <li><span class="text-cyan">•</span> <span class="text-white">User List Directory</span></li>
+                </ul>
+              </div>
+
+              <div class="feature-box">
+                <h3 class="text-green">╔═══════════════════════════╗</h3>
+                <h3 class="text-green">║ 🎨 Classic BBS Style      ║</h3>
+                <h3 class="text-green">╚═══════════════════════════╝</h3>
+                <ul class="feature-list">
+                  <li><span class="text-cyan">•</span> <span class="text-white">Full ANSI Graphics</span></li>
+                  <li><span class="text-cyan">•</span> <span class="text-white">CP437 Character Set</span></li>
+                  <li><span class="text-cyan">•</span> <span class="text-white">ASCII Art Support</span></li>
+                  <li><span class="text-cyan">•</span> <span class="text-white">Retro Interface</span></li>
+                  <li><span class="text-cyan">•</span> <span class="text-white">Color Customization</span></li>
+                </ul>
+              </div>
+
+              <div class="feature-box">
+                <h3 class="text-green">╔═══════════════════════════╗</h3>
+                <h3 class="text-green">║ ⚙️ Administration         ║</h3>
+                <h3 class="text-green">╚═══════════════════════════╝</h3>
+                <ul class="feature-list">
+                  <li><span class="text-cyan">•</span> <span class="text-white">Sysop Admin Panel</span></li>
+                  <li><span class="text-cyan">•</span> <span class="text-white">User Management</span></li>
+                  <li><span class="text-cyan">•</span> <span class="text-white">System Statistics</span></li>
+                  <li><span class="text-cyan">•</span> <span class="text-white">Log Viewer</span></li>
+                  <li><span class="text-cyan">•</span> <span class="text-white">Session Monitoring</span></li>
+                </ul>
+              </div>
+            </div>
+
+            <div class="tech-stack">
+              <h3 class="text-yellow">╔═════════════════════════════════════════════╗</h3>
+              <h3 class="text-yellow">║ Technology Stack                            ║</h3>
+              <h3 class="text-yellow">╚═════════════════════════════════════════════╝</h3>
+              <p class="text-white">
+                <span class="text-cyan">Backend:</span> Node.js with ES Modules<br>
+                <span class="text-cyan">Database:</span> SQLite3<br>
+                <span class="text-cyan">Protocol:</span> Telnet (RFC 854)<br>
+                <span class="text-cyan">Graphics:</span> ANSI/VT100 Terminal Graphics<br>
+                <span class="text-cyan">Web:</span> Express + WebSocket
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Terminal Tab -->
+        <div class="tab-content" id="terminal-tab">
+          <div class="section-content">
+            <h2><span class="text-cyan">╔═══════════════════════════════════════════════════════╗</span></h2>
+            <p><span class="text-cyan">║</span> <span class="text-yellow">Web Terminal - Connect via Browser</span>                   <span class="text-cyan">║</span></p>
+            <h2><span class="text-cyan">╚═══════════════════════════════════════════════════════╝</span></h2>
+
+            <div class="terminal-instructions">
+              <p class="text-white">
+                Connect to the BBS directly from your browser using the terminal below.
+                No additional software required!
+              </p>
+              <p class="text-yellow">
+                Click inside the terminal and press any key to begin...
+              </p>
+            </div>
+
+            <div class="terminal-container">
+              <div id="fTelnetContainer" style="width: 100%; height: 600px; border: 2px solid #00ffff;">
+                <!-- fTelnet terminal will be loaded here -->
+              </div>
+            </div>
+
+            <script src="https://embed-v2.ftelnet.ca/js/ftelnet-loader.norip.js"></script>
+            <script>
+              var Options = new fTelnetOptions();
+              Options.HostName = 'soulthread.ignorelist.com';
+              Options.Port = 2323;
+              Options.ConnectionType = 'telnet';
+              Options.ScreenColumns = 80;
+              Options.ScreenRows = 25;
+              Options.ForceWss = false;
+              Options.ProxyHostName = 'embed-v2.ftelnet.ca';
+              Options.ProxyPort = 1123;
+              Options.ProxyPortSecure = 11235;
+              var fTelnet = new fTelnetClient('fTelnetContainer', Options);
+            </script>
+
+            <div class="terminal-note">
+              <p class="text-white">
+                <span class="text-yellow">Note:</span> The web terminal connects via WebSocket proxy.
+                For the best experience, we recommend using a dedicated telnet client like
+                <span class="text-cyan">SyncTERM</span> or <span class="text-cyan">PuTTY</span>.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div class="terminal-footer">
+        <p class="text-cyan">
+          NodeBoard BBS v1.1 | A modern tribute to 1990s BBS culture |
+          Inspired by classic 1990s BBS systems, built with Node.js
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

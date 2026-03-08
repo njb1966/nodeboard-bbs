@@ -1,0 +1,237 @@
+================================================================================
+TradeWars 2002 - BBS Integration Steps
+================================================================================
+
+You've successfully configured TradeWars in DOSBox-X!
+Now follow these steps to integrate it with your BBS.
+
+================================================================================
+STEP 1: Initialize the Universe
+================================================================================
+
+Before the game can be played, you must generate the universe:
+
+From the doors/tw folder, run:
+    bigbang-tw-dosbox-x.bat
+
+This will:
+  - Generate all sectors (1000 by default)
+  - Create ports (20 by default)
+  - Initialize all game data files
+
+This only needs to be done ONCE when first setting up the game.
+
+Wait for it to complete - it may take a minute or two.
+
+================================================================================
+STEP 2: Test the Game Locally
+================================================================================
+
+Before adding to BBS, test that the game works:
+
+From the doors/tw folder, run:
+    test-tw-dosbox-x.bat
+
+You should see:
+  - TradeWars 2002 main menu
+  - Node 1 should be available
+  - Game should be playable
+
+Press Q to quit when done testing.
+
+If this works, the game is ready for BBS integration!
+
+================================================================================
+STEP 3: Add TradeWars to BBS Database
+================================================================================
+
+From the main BBS folder (E:\custombbs), run:
+    node add-tradewars.js
+
+This will:
+  - Add TradeWars 2002 to the doors database
+  - Configure it to use launch-tw-dosbox-x.bat
+  - Set working directory to doors/tw
+  - Enable the door for all users (security level 10)
+
+You should see:
+  "TradeWars 2002 added successfully!"
+  "NOTE: Using DOSBox-X launcher"
+
+================================================================================
+STEP 4: Start Your BBS
+================================================================================
+
+Start the BBS server:
+    npm start
+
+The BBS should start on port 2323 (default)
+
+================================================================================
+STEP 5: Connect and Test from BBS
+================================================================================
+
+Connect to your BBS:
+    telnet localhost 2323
+
+Or from another machine:
+    telnet soulthread.ignorelist.com 2323
+
+Navigate to:
+  Main Menu → Door Games → TradeWars 2002
+
+================================================================================
+IMPORTANT NOTES ABOUT BBS INTEGRATION
+================================================================================
+
+CURRENT BEHAVIOR:
+  When a user selects TradeWars from the BBS menu, DOSBox-X will
+  launch in a SEPARATE WINDOW on the server.
+
+  The game will NOT display in the user's telnet session.
+
+  This is because DOSBox-X (like DOSBox) does not support stdio
+  redirection that the BBS uses for telnet communication.
+
+WHY THIS HAPPENS:
+  The DoorService in src/services/DoorService.js pipes stdio between
+  the telnet connection and the door process. However, DOSBox-X
+  opens its own window and doesn't read from stdin or write to stdout
+  in the way the BBS expects.
+
+THIS WORKS FOR:
+  - Local testing (what you've been doing)
+  - Direct server access
+  - Situations where users can see/access the server desktop
+
+THIS DOES NOT WORK FOR:
+  - Remote telnet users connecting over the internet
+  - Traditional BBS door game experience
+  - Users who can't see the server's desktop
+
+================================================================================
+SOLUTION FOR PRODUCTION BBS USE
+================================================================================
+
+For proper remote telnet integration, you need a telnet-to-DOS bridge:
+
+OPTION 1: NetFoss + GameSrv (Windows)
+  - NetFoss: Telnet FOSSIL driver
+  - GameSrv: DOS game server
+  - Provides proper telnet-to-DOS communication
+  - Commonly used for BBS doors
+  - See: http://www.pcmicro.com/netfoss/
+
+OPTION 2: dosemu2 with door32 (Linux)
+  - dosemu2: DOS emulator for Linux
+  - Supports drop files and stdio properly
+  - Better for Linux-based BBS systems
+
+OPTION 3: Synchronet BBS (Full BBS Solution)
+  - Has built-in door support
+  - Handles TradeWars integration automatically
+  - See: https://synchro.net/
+
+OPTION 4: Use GameSrv as a separate service
+  - GameSrv listens on a port (e.g., 2324)
+  - Configure BBS door to telnet to that port
+  - GameSrv handles the DOS game interaction
+  - Users connect through the BBS to GameSrv
+
+================================================================================
+CURRENT USE CASES
+================================================================================
+
+WHAT WORKS NOW:
+  ✓ Local testing on the server
+  ✓ Server operator can play directly
+  ✓ Configuration and universe generation
+  ✓ Game database integration
+  ✓ Menu system integration
+
+WHAT NEEDS TELNET-TO-DOS BRIDGE:
+  ✗ Remote telnet users playing the game
+  ✗ Traditional BBS door experience
+  ✗ Multi-node simultaneous play
+
+================================================================================
+TESTING YOUR SETUP
+================================================================================
+
+Test from the BBS to verify menu integration:
+
+1. Start BBS: npm start
+2. Connect: telnet localhost 2323
+3. Login (username: sysop, password: sysop)
+4. Main Menu → [D] Door Games
+5. You should see: [1] TradeWars 2002 (played 0 times)
+6. Select [1]
+
+Expected behavior:
+  - DOSBox-X window opens on the server
+  - Game launches in that window
+  - Your telnet connection may disconnect or hang
+  - This is expected with current implementation
+
+To play the game:
+  - You must be at the server console
+  - Or use Remote Desktop to see the server's desktop
+  - The game runs in the DOSBox-X window
+
+================================================================================
+NEXT STEPS FOR PRODUCTION
+================================================================================
+
+If you want remote users to play TradeWars via telnet:
+
+1. Research NetFoss + GameSrv setup
+2. Or consider switching to Synchronet BBS
+3. Or implement a custom telnet-to-DOSBox bridge
+4. Or use a Linux-based solution with dosemu2
+
+For local/testing use, the current setup works fine!
+
+================================================================================
+FILES CREATED FOR BBS INTEGRATION
+================================================================================
+
+  launch-tw-dosbox-x.bat  - Launcher used by BBS
+  add-tradewars.js        - Database integration script
+  dosbox-tw.conf          - DOSBox-X configuration
+
+  All game data files in doors/tw/
+
+================================================================================
+TROUBLESHOOTING
+================================================================================
+
+PROBLEM: "Door executable not found"
+SOLUTION: Verify doors/tw/launch-tw-dosbox-x.bat exists
+          Check working_dir in database is correct
+
+PROBLEM: Game doesn't appear in menu
+SOLUTION: Run: node add-tradewars.js
+          Verify door is enabled in database
+
+PROBLEM: DOSBox-X window opens but crashes
+SOLUTION: Run bigbang-tw-dosbox-x.bat first
+          Verify universe was generated
+          Check TWERR.LOG for errors
+
+PROBLEM: "Node configuration error"
+SOLUTION: Verify TEDIT configuration was saved
+          Check TWNODE.DAT exists
+
+================================================================================
+QUESTIONS?
+================================================================================
+
+See the documentation files in doors/tw/:
+  - QUICKSTART.txt
+  - DOSBOX-X-SOLUTION.txt
+  - README-SETUP.md
+
+Or check the main BBS folder:
+  - TRADEWARS-SETUP.md
+
+================================================================================

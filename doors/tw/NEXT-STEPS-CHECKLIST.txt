@@ -1,0 +1,58 @@
+================================================================================
+TradeWars 2002 - BBS Integration Checklist
+================================================================================
+
+Game is configured in DOSBox-X! Follow these steps:
+
+[ ] STEP 1: Generate Universe
+    Run: bigbang-tw-dosbox-x.bat
+    Wait for completion (1-2 minutes)
+    You should see sectors and ports being created
+
+[ ] STEP 2: Test Game Locally
+    Run: test-tw-dosbox-x.bat
+    Game should launch and show main menu
+    Try playing briefly to verify it works
+    Press Q to quit
+
+[ ] STEP 3: Add to BBS Database
+    From main BBS folder: node add-tradewars.js
+    Should show "TradeWars 2002 added successfully!"
+
+[ ] STEP 4: Start BBS
+    From main BBS folder: npm start
+    BBS should start on port 2323
+
+[ ] STEP 5: Connect to BBS
+    Run: telnet localhost 2323
+    Login (default: sysop/sysop)
+
+[ ] STEP 6: Access Door Games Menu
+    From main menu, select [D] Door Games
+    You should see TradeWars 2002 in the list
+
+[ ] STEP 7: Test Door Launch
+    Select TradeWars 2002
+    DOSBox-X window should open on server
+    Game should load in that window
+
+================================================================================
+IMPORTANT REMINDER
+================================================================================
+
+TradeWars will launch in a SEPARATE DOSBox-X WINDOW on the server.
+It will NOT display in the telnet session.
+
+This is expected behavior with the current setup.
+
+For remote telnet users to play, you'll need:
+  - NetFoss + GameSrv (Windows)
+  - dosemu2 (Linux)
+  - Synchronet BBS (full solution)
+
+See BBS-INTEGRATION.txt for details.
+
+================================================================================
+CURRENT STATUS: ✓ Game configured in DOSBox-X
+NEXT TASK:      Generate universe with bigbang-tw-dosbox-x.bat
+================================================================================

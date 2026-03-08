@@ -1,0 +1,10 @@
+node_modules/
+.env
+data/*.db
+data/uploads/*
+data/downloads/*
+logs/*.log
+*.swp
+*.swo
+.DS_Store
+custombbs-backup/
