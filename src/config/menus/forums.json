@@ -1,0 +1,9 @@
+{
+  "id": "forums",
+  "title": "MESSAGE FORUMS",
+  "prompt": "Forum",
+  "items": [
+    { "key": "Q", "text": "Return to Main Menu", "action": "quit" }
+  ],
+  "dynamic": true
+}

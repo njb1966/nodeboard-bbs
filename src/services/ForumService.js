@@ -4,6 +4,7 @@
 import getDatabase from '../database/db.js';
 import { colorText } from '../utils/ansi.js';
 import { wordWrap } from '../utils/text.js';
+import { loadMenu } from './menus/MenuLoader.js';
 
 export class ForumService {
   constructor(connection) {
@@ -14,8 +15,13 @@ export class ForumService {
 
   /**
    * Show forum list
+   *
+   * Uses the forums.json menu config for title/prompt, but builds items
+   * dynamically from the database since forum lists vary per installation.
    */
   async show() {
+    const menuDef = loadMenu('forums');
+
     while (true) {
       const db = getDatabase();
       const forums = db.prepare(`
@@ -29,9 +35,10 @@ export class ForumService {
         text: `${forum.name} (${forum.post_count} posts)`,
       }));
 
-      menuItems.push({ key: 'Q', text: 'Return to Main Menu' });
+      // Append static items from the menu config (e.g., "Q - Return to Main Menu")
+      menuItems.push(...menuDef.items);
 
-      this.screen.menu('MESSAGE FORUMS', menuItems, 'Forum');
+      this.screen.menu(menuDef.title, menuItems, menuDef.prompt || 'Forum');
 
       const choice = await this.connection.getInput();
 

@@ -6,6 +6,7 @@ import { ANSI, colorText } from '../utils/ansi.js';
 import { User } from '../models/User.js';
 import { Session } from '../models/Session.js';
 import { MainMenu } from '../services/menus/MainMenu.js';
+import { LoginSequence } from '../services/LoginSequence.js';
 import config from '../config/index.js';
 
 export class TelnetConnection {
@@ -207,7 +208,9 @@ export class TelnetConnection {
         this.screen.messageBox('Welcome', `Welcome back, ${user.username}!`, 'success');
         await this.getChar();
 
-        // Enter main menu
+        // Run login sequence then enter main menu
+        const loginSeq = new LoginSequence(this);
+        await loginSeq.show();
         await this.mainMenu();
         return;
       } else {
@@ -271,7 +274,9 @@ export class TelnetConnection {
       this.screen.messageBox('Success', 'Your account has been created successfully!', 'success');
       await this.getChar();
 
-      // Enter main menu
+      // Run login sequence then enter main menu
+      const loginSeq = new LoginSequence(this);
+      await loginSeq.show();
       await this.mainMenu();
     } catch (error) {
       this.screen.messageBox('Error', error.message, 'error');

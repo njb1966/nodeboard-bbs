@@ -1,7 +1,12 @@
 /**
  * Main Menu
+ *
+ * Uses the config-driven MenuEngine to render and dispatch the main menu.
+ * Menu items are defined in src/config/menus/main.json.
  */
 import { colorText } from '../../utils/ansi.js';
+import { loadMenu } from './MenuLoader.js';
+import { MenuEngine } from './MenuEngine.js';
 import { ForumService } from '../ForumService.js';
 import { MessageService } from '../MessageService.js';
 import { FileService } from '../FileService.js';
@@ -20,152 +25,62 @@ export class MainMenu {
    * Show main menu
    */
   async show() {
-    while (true) {
-      const unreadMail = this.user.getUnreadMessageCount();
-      const mailIndicator = unreadMail > 0 ? ` (${unreadMail} new)` : '';
+    const menuDef = loadMenu('main');
+    const engine = new MenuEngine(this.connection, menuDef);
 
-      const menuItems = [
-        { key: 'M', text: 'Message Forums' },
-        { key: 'P', text: `Private Mail${mailIndicator}` },
-        { key: 'F', text: 'File Areas' },
-        { key: 'D', text: 'Door Games' },
-        { key: 'U', text: 'User List' },
-        { key: 'W', text: 'Who\'s Online' },
-        { key: 'B', text: 'Bulletins' },
-        { key: 'S', text: 'User Settings' },
-        { key: 'G', text: 'Goodbye (Logoff)' },
-      ];
+    // Register all action handlers
 
-      // Add sysop menu for sysops
-      if (this.user.isSysop()) {
-        menuItems.splice(8, 0, { key: 'A', text: 'Sysop Admin' });
-      }
+    engine.registerAction('forums', async () => {
+      const forumService = new ForumService(this.connection);
+      await forumService.show();
+    });
 
-      this.screen.menu('MAIN MENU', menuItems, 'Command');
+    engine.registerAction('mail', async () => {
+      const messageService = new MessageService(this.connection);
+      await messageService.show();
+    });
 
-      const choice = (await this.connection.getInput()).toUpperCase();
+    engine.registerAction('files', async () => {
+      const fileService = new FileService(this.connection);
+      await fileService.show();
+    });
 
-      switch (choice) {
-        case 'M':
-          await this.messageForums();
-          break;
+    engine.registerAction('doors', async () => {
+      const doorService = new DoorService(this.connection);
+      await doorService.show();
+    });
 
-        case 'P':
-          await this.privateMail();
-          break;
+    engine.registerAction('userList', async () => {
+      const userService = new UserService(this.connection);
+      await userService.showUserList();
+    });
 
-        case 'F':
-          await this.fileAreas();
-          break;
+    engine.registerAction('whosOnline', async () => {
+      const userService = new UserService(this.connection);
+      await userService.showWhosOnline();
+    });
 
-        case 'D':
-          await this.doorGames();
-          break;
+    engine.registerAction('bulletins', async () => {
+      const userService = new UserService(this.connection);
+      await userService.showBulletins();
+    });
 
-        case 'U':
-          await this.userList();
-          break;
+    engine.registerAction('settings', async () => {
+      const userService = new UserService(this.connection);
+      await userService.showSettings();
+    });
 
-        case 'W':
-          await this.whosOnline();
-          break;
+    engine.registerAction('sysopAdmin', async () => {
+      const sysopService = new SysopService(this.connection);
+      await sysopService.show();
+    });
 
-        case 'B':
-          await this.bulletins();
-          break;
+    engine.registerAction('goodbye', async () => {
+      await this.goodbye();
+      return 'exit';
+    });
 
-        case 'S':
-          await this.userSettings();
-          break;
-
-        case 'A':
-          if (this.user.isSysop()) {
-            await this.sysopAdmin();
-          }
-          break;
-
-        case 'G':
-        case 'Q':
-          await this.goodbye();
-          return;
-
-        default:
-          this.screen.messageBox('Error', 'Invalid selection. Please try again.', 'error');
-          await this.connection.getChar();
-      }
-    }
-  }
-
-  /**
-   * Message forums
-   */
-  async messageForums() {
-    const forumService = new ForumService(this.connection);
-    await forumService.show();
-  }
-
-  /**
-   * Private mail
-   */
-  async privateMail() {
-    const messageService = new MessageService(this.connection);
-    await messageService.show();
-  }
-
-  /**
-   * File areas
-   */
-  async fileAreas() {
-    const fileService = new FileService(this.connection);
-    await fileService.show();
-  }
-
-  /**
-   * Door games
-   */
-  async doorGames() {
-    const doorService = new DoorService(this.connection);
-    await doorService.show();
-  }
-
-  /**
-   * User list
-   */
-  async userList() {
-    const userService = new UserService(this.connection);
-    await userService.showUserList();
-  }
-
-  /**
-   * Who's online
-   */
-  async whosOnline() {
-    const userService = new UserService(this.connection);
-    await userService.showWhosOnline();
-  }
-
-  /**
-   * Bulletins
-   */
-  async bulletins() {
-    const userService = new UserService(this.connection);
-    await userService.showBulletins();
-  }
-
-  /**
-   * User settings
-   */
-  async userSettings() {
-    const userService = new UserService(this.connection);
-    await userService.showSettings();
-  }
-
-  /**
-   * Sysop admin
-   */
-  async sysopAdmin() {
-    const sysopService = new SysopService(this.connection);
-    await sysopService.show();
+    await engine.show();
   }
 
   /**
