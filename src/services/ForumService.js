@@ -3,51 +3,13 @@
  */
 import getDatabase from '../database/db.js';
 import { colorText } from '../utils/ansi.js';
+import { wordWrap } from '../utils/text.js';
 
 export class ForumService {
   constructor(connection) {
     this.connection = connection;
     this.screen = connection.screen;
     this.user = connection.user;
-  }
-
-  /**
-   * Word wrap text to fit terminal width
-   */
-  wordWrap(text, width = 78) {
-    const lines = [];
-    const paragraphs = text.split('\n');
-
-    for (const paragraph of paragraphs) {
-      if (paragraph.trim() === '') {
-        lines.push('');
-        continue;
-      }
-
-      const words = paragraph.split(' ');
-      let currentLine = '';
-
-      for (const word of words) {
-        if ((currentLine + word).length > width) {
-          if (currentLine.length > 0) {
-            lines.push(currentLine.trim());
-            currentLine = word + ' ';
-          } else {
-            // Word is longer than width, just add it
-            lines.push(word);
-            currentLine = '';
-          }
-        } else {
-          currentLine += word + ' ';
-        }
-      }
-
-      if (currentLine.trim().length > 0) {
-        lines.push(currentLine.trim());
-      }
-    }
-
-    return lines.join('\r\n');
   }
 
   /**
@@ -153,7 +115,7 @@ export class ForumService {
     this.connection.write(colorText(`From: ${message.username}`, 'white') + '\r\n');
     this.connection.write(colorText(`Date: ${new Date(message.created_at).toLocaleString()}`, 'white') + '\r\n');
     this.connection.write(colorText('='.repeat(80), 'cyan', null, true) + '\r\n\r\n');
-    this.connection.write(this.wordWrap(message.body) + '\r\n\r\n');
+    this.connection.write(wordWrap(message.body) + '\r\n\r\n');
 
     // Show replies
     const replies = db.prepare(`
@@ -166,7 +128,7 @@ export class ForumService {
       this.connection.write(colorText('- Replies -', 'cyan', null, true) + '\r\n\r\n');
       replies.forEach((reply, idx) => {
         this.connection.write(colorText(`[${idx + 1}] ${reply.username} - ${new Date(reply.created_at).toLocaleString()}`, 'green') + '\r\n');
-        this.connection.write(this.wordWrap(reply.body) + '\r\n\r\n');
+        this.connection.write(wordWrap(reply.body) + '\r\n\r\n');
       });
     }
 

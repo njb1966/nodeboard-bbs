@@ -3,6 +3,7 @@
  */
 import getDatabase from '../database/db.js';
 import { colorText } from '../utils/ansi.js';
+import { wordWrap } from '../utils/text.js';
 import { User } from '../models/User.js';
 
 export class MessageService {
@@ -10,44 +11,6 @@ export class MessageService {
     this.connection = connection;
     this.screen = connection.screen;
     this.user = connection.user;
-  }
-
-  /**
-   * Word wrap text to fit terminal width
-   */
-  wordWrap(text, width = 78) {
-    const lines = [];
-    const paragraphs = text.split('\n');
-
-    for (const paragraph of paragraphs) {
-      if (paragraph.trim() === '') {
-        lines.push('');
-        continue;
-      }
-
-      const words = paragraph.split(' ');
-      let currentLine = '';
-
-      for (const word of words) {
-        if ((currentLine + word).length > width) {
-          if (currentLine.length > 0) {
-            lines.push(currentLine.trim());
-            currentLine = word + ' ';
-          } else {
-            lines.push(word);
-            currentLine = '';
-          }
-        } else {
-          currentLine += word + ' ';
-        }
-      }
-
-      if (currentLine.trim().length > 0) {
-        lines.push(currentLine.trim());
-      }
-    }
-
-    return lines.join('\r\n');
   }
 
   /**
@@ -153,7 +116,7 @@ export class MessageService {
     this.connection.write(colorText(`From: ${message.from_username}`, 'white') + '\r\n');
     this.connection.write(colorText(`Date: ${new Date(message.created_at).toLocaleString()}`, 'white') + '\r\n');
     this.connection.write(colorText('='.repeat(80), 'cyan', null, true) + '\r\n\r\n');
-    this.connection.write(this.wordWrap(message.body) + '\r\n\r\n');
+    this.connection.write(wordWrap(message.body) + '\r\n\r\n');
 
     this.connection.write(colorText('[R]eply  [D]elete  [Q]uit: ', 'yellow', null, true));
     const choice = (await this.connection.getInput()).toUpperCase();

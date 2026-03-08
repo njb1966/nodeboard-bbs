@@ -5,6 +5,7 @@ import getDatabase from '../database/db.js';
 import { User } from '../models/User.js';
 import { Session } from '../models/Session.js';
 import { colorText } from '../utils/ansi.js';
+import { wordWrap } from '../utils/text.js';
 import config from '../config/index.js';
 
 export class UserService {
@@ -12,44 +13,6 @@ export class UserService {
     this.connection = connection;
     this.screen = connection.screen;
     this.user = connection.user;
-  }
-
-  /**
-   * Word wrap text to fit terminal width
-   */
-  wordWrap(text, width = 78) {
-    const lines = [];
-    const paragraphs = text.split('\n');
-
-    for (const paragraph of paragraphs) {
-      if (paragraph.trim() === '') {
-        lines.push('');
-        continue;
-      }
-
-      const words = paragraph.split(' ');
-      let currentLine = '';
-
-      for (const word of words) {
-        if ((currentLine + word).length > width) {
-          if (currentLine.length > 0) {
-            lines.push(currentLine.trim());
-            currentLine = word + ' ';
-          } else {
-            lines.push(word);
-            currentLine = '';
-          }
-        } else {
-          currentLine += word + ' ';
-        }
-      }
-
-      if (currentLine.trim().length > 0) {
-        lines.push(currentLine.trim());
-      }
-    }
-
-    return lines.join('\r\n');
   }
 
   /**
@@ -162,7 +125,7 @@ export class UserService {
       this.connection.write(colorText(bulletin.title, 'yellow', null, true) + '\r\n');
       this.connection.write(colorText(`By: ${bulletin.author_name} - ${new Date(bulletin.created_at).toLocaleDateString()}`, 'white') + '\r\n');
       this.connection.write(colorText('='.repeat(80), 'cyan', null, true) + '\r\n\r\n');
-      this.connection.write(this.wordWrap(bulletin.content) + '\r\n\r\n');
+      this.connection.write(wordWrap(bulletin.content) + '\r\n\r\n');
       this.connection.write(colorText('-'.repeat(80), 'cyan') + '\r\n');
 
       this.connection.write(colorText('Press any key for next bulletin (or Q to quit)...', 'white') + '\r\n');

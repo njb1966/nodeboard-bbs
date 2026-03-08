@@ -1,7 +1,7 @@
 /**
  * Screen buffer and rendering utilities
  */
-import { ANSI, cursorTo, drawBox, centerText, padText, colorText } from './ansi.js';
+import { ANSI, BOX, cursorTo, drawBox, centerText, padText, colorText } from './ansi.js';
 
 export class Screen {
   constructor(width = 80, height = 24) {
@@ -84,7 +84,7 @@ export class BBSScreen {
    */
   header(bbsName, userName = 'Guest') {
     this.write(ANSI.CLEAR_SCREEN);
-    this.write(ANSI.FG_CYAN + ANSI.BRIGHT + '='.repeat(this.width) + '\r\n' + ANSI.RESET);
+    this.write(ANSI.FG_CYAN + ANSI.BRIGHT + BOX.D_HORIZONTAL.repeat(this.width) + '\r\n' + ANSI.RESET);
 
     const namePad = Math.floor((this.width - bbsName.length) / 2);
     this.write(ANSI.FG_YELLOW + ANSI.BRIGHT);
@@ -97,7 +97,7 @@ export class BBSScreen {
     this.write(' '.repeat(userPad) + userText + '\r\n');
     this.write(ANSI.RESET);
 
-    this.write(ANSI.FG_CYAN + ANSI.BRIGHT + '='.repeat(this.width) + '\r\n' + ANSI.RESET);
+    this.write(ANSI.FG_CYAN + ANSI.BRIGHT + BOX.D_HORIZONTAL.repeat(this.width) + '\r\n' + ANSI.RESET);
   }
 
   /**
@@ -105,7 +105,7 @@ export class BBSScreen {
    */
   footer(text = '') {
     this.write(cursorTo(this.height - 1, 1));
-    this.write(colorText('-'.repeat(this.width), 'cyan'));
+    this.write(colorText(BOX.HORIZONTAL.repeat(this.width), 'cyan'));
     this.write(cursorTo(this.height, 1));
     this.write(colorText(padText(text, this.width), 'white', 'blue'));
   }
@@ -117,26 +117,26 @@ export class BBSScreen {
     this.clear();
 
     this.write('\r\n');
-    this.write(ANSI.FG_CYAN + ANSI.BRIGHT + '+===================================================+\r\n' + ANSI.RESET);
+    this.write(ANSI.FG_CYAN + ANSI.BRIGHT + BOX.D_TOP_LEFT + BOX.D_HORIZONTAL.repeat(51) + BOX.D_TOP_RIGHT + '\r\n' + ANSI.RESET);
 
     // Title line
     const titlePad = Math.floor((51 - title.length) / 2);
-    this.write(ANSI.FG_CYAN + ANSI.BRIGHT + '|' + ANSI.RESET);
+    this.write(ANSI.FG_CYAN + ANSI.BRIGHT + BOX.D_VERTICAL + ANSI.RESET);
     this.write(ANSI.FG_YELLOW + ANSI.BRIGHT);
     this.write(' '.repeat(titlePad) + title.toUpperCase() + ' '.repeat(51 - title.length - titlePad));
-    this.write(ANSI.RESET + ANSI.FG_CYAN + ANSI.BRIGHT + '|\r\n' + ANSI.RESET);
+    this.write(ANSI.RESET + ANSI.FG_CYAN + ANSI.BRIGHT + BOX.D_VERTICAL + '\r\n' + ANSI.RESET);
 
-    this.write(ANSI.FG_CYAN + ANSI.BRIGHT + '+===================================================+\r\n' + ANSI.RESET);
+    this.write(ANSI.FG_CYAN + ANSI.BRIGHT + BOX.D_T_RIGHT + BOX.D_HORIZONTAL.repeat(51) + BOX.D_LEFT + '\r\n' + ANSI.RESET);
 
     // Menu items
     items.forEach(item => {
-      this.write(ANSI.FG_CYAN + ANSI.BRIGHT + '| ' + ANSI.RESET);
+      this.write(ANSI.FG_CYAN + ANSI.BRIGHT + BOX.D_VERTICAL + ' ' + ANSI.RESET);
       this.write(ANSI.FG_GREEN + ANSI.BRIGHT + padText(item.key, 3) + ANSI.RESET);
       this.write(ANSI.FG_WHITE + padText(item.text, 46) + ANSI.RESET);
-      this.write(ANSI.FG_CYAN + ANSI.BRIGHT + ' |\r\n' + ANSI.RESET);
+      this.write(ANSI.FG_CYAN + ANSI.BRIGHT + ' ' + BOX.D_VERTICAL + '\r\n' + ANSI.RESET);
     });
 
-    this.write(ANSI.FG_CYAN + ANSI.BRIGHT + '+===================================================+\r\n' + ANSI.RESET);
+    this.write(ANSI.FG_CYAN + ANSI.BRIGHT + BOX.D_BOTTOM_LEFT + BOX.D_HORIZONTAL.repeat(51) + BOX.D_BOTTOM_RIGHT + '\r\n' + ANSI.RESET);
     this.write('\r\n');
     this.write(ANSI.FG_YELLOW + ANSI.BRIGHT + prompt + ': ' + ANSI.RESET);
   }
@@ -147,14 +147,14 @@ export class BBSScreen {
   list(title, items, startIndex = 0) {
     let output = '\r\n';
     output += colorText(` ${title}`, 'yellow', null, true) + '\r\n';
-    output += colorText('-'.repeat(this.width), 'cyan') + '\r\n';
+    output += colorText(BOX.HORIZONTAL.repeat(this.width), 'cyan') + '\r\n';
 
     items.slice(startIndex, startIndex + 15).forEach((item, idx) => {
       output += colorText(padText(`[${startIndex + idx + 1}]`, 6), 'green', null, true);
       output += colorText(item, 'white') + '\r\n';
     });
 
-    output += colorText('-'.repeat(this.width), 'cyan') + '\r\n';
+    output += colorText(BOX.HORIZONTAL.repeat(this.width), 'cyan') + '\r\n';
     this.write(output);
   }
 
@@ -188,16 +188,16 @@ export class BBSScreen {
     const width = 60;
 
     this.write('\r\n');
-    this.write(c.border + ANSI.BRIGHT + '+' + '='.repeat(width - 2) + '+\r\n' + ANSI.RESET);
+    this.write(c.border + ANSI.BRIGHT + BOX.D_TOP_LEFT + BOX.D_HORIZONTAL.repeat(width - 2) + BOX.D_TOP_RIGHT + '\r\n' + ANSI.RESET);
 
     // Title line
     const titlePad = Math.floor((width - 2 - title.length) / 2);
-    this.write(c.border + ANSI.BRIGHT + '|' + ANSI.RESET);
+    this.write(c.border + ANSI.BRIGHT + BOX.D_VERTICAL + ANSI.RESET);
     this.write(c.title + ANSI.BRIGHT);
     this.write(' '.repeat(titlePad) + title + ' '.repeat(width - 2 - title.length - titlePad));
-    this.write(ANSI.RESET + c.border + ANSI.BRIGHT + '|\r\n' + ANSI.RESET);
+    this.write(ANSI.RESET + c.border + ANSI.BRIGHT + BOX.D_VERTICAL + '\r\n' + ANSI.RESET);
 
-    this.write(c.border + ANSI.BRIGHT + '+' + '='.repeat(width - 2) + '+\r\n' + ANSI.RESET);
+    this.write(c.border + ANSI.BRIGHT + BOX.D_T_RIGHT + BOX.D_HORIZONTAL.repeat(width - 2) + BOX.D_LEFT + '\r\n' + ANSI.RESET);
 
     // Word wrap message
     const words = message.split(' ');
@@ -205,9 +205,9 @@ export class BBSScreen {
 
     words.forEach(word => {
       if ((line + word).length > width - 6) {
-        this.write(c.border + ANSI.BRIGHT + '| ' + ANSI.RESET);
+        this.write(c.border + ANSI.BRIGHT + BOX.D_VERTICAL + ' ' + ANSI.RESET);
         this.write(c.text + padText(line.trim(), width - 4) + ANSI.RESET);
-        this.write(c.border + ANSI.BRIGHT + ' |\r\n' + ANSI.RESET);
+        this.write(c.border + ANSI.BRIGHT + ' ' + BOX.D_VERTICAL + '\r\n' + ANSI.RESET);
         line = word + ' ';
       } else {
         line += word + ' ';
@@ -215,12 +215,12 @@ export class BBSScreen {
     });
 
     if (line.trim()) {
-      this.write(c.border + ANSI.BRIGHT + '| ' + ANSI.RESET);
+      this.write(c.border + ANSI.BRIGHT + BOX.D_VERTICAL + ' ' + ANSI.RESET);
       this.write(c.text + padText(line.trim(), width - 4) + ANSI.RESET);
-      this.write(c.border + ANSI.BRIGHT + ' |\r\n' + ANSI.RESET);
+      this.write(c.border + ANSI.BRIGHT + ' ' + BOX.D_VERTICAL + '\r\n' + ANSI.RESET);
     }
 
-    this.write(c.border + ANSI.BRIGHT + '+' + '='.repeat(width - 2) + '+\r\n' + ANSI.RESET);
+    this.write(c.border + ANSI.BRIGHT + BOX.D_BOTTOM_LEFT + BOX.D_HORIZONTAL.repeat(width - 2) + BOX.D_BOTTOM_RIGHT + '\r\n' + ANSI.RESET);
     this.write('\r\n');
     this.write(ANSI.FG_WHITE + 'Press any key to continue...\r\n' + ANSI.RESET);
   }
@@ -236,20 +236,20 @@ export class BBSScreen {
       const padding = Math.floor((66 - text.length) / 2);
       const rightPad = 66 - text.length - padding;
       this.write(ANSI.FG_CYAN + ANSI.BRIGHT);
-      this.write('  |');
+      this.write('  ' + BOX.D_VERTICAL);
       this.write(ANSI.RESET);
       this.write(color + ANSI.BRIGHT);
       this.write(' '.repeat(padding) + text + ' '.repeat(rightPad));
       this.write(ANSI.RESET);
       this.write(ANSI.FG_CYAN + ANSI.BRIGHT);
-      this.write('|');
+      this.write(BOX.D_VERTICAL);
       this.write(ANSI.RESET);
       this.write('\r\n');
     };
 
     this.write('\r\n\r\n');
     this.write(ANSI.FG_CYAN + ANSI.BRIGHT);
-    this.write('  +==================================================================+\r\n');
+    this.write('  ' + BOX.D_TOP_LEFT + BOX.D_HORIZONTAL.repeat(66) + BOX.D_TOP_RIGHT + '\r\n');
     this.write(ANSI.RESET);
 
     writeLine('', ANSI.FG_WHITE);
@@ -270,7 +270,7 @@ export class BBSScreen {
     writeLine('', ANSI.FG_WHITE);
 
     this.write(ANSI.FG_CYAN + ANSI.BRIGHT);
-    this.write('  +==================================================================+\r\n');
+    this.write('  ' + BOX.D_BOTTOM_LEFT + BOX.D_HORIZONTAL.repeat(66) + BOX.D_BOTTOM_RIGHT + '\r\n');
     this.write(ANSI.RESET);
     this.write('\r\n');
   }

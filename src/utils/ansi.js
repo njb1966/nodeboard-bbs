@@ -101,35 +101,35 @@ export function colorText(text, fg, bg = null, bright = false) {
 }
 
 /**
- * Box drawing characters (CP437/ASCII compatible)
- * Using ASCII characters that work in all terminals
+ * Box drawing characters (Unicode)
+ * Using proper Unicode box-drawing characters for clean terminal rendering
  */
 export const BOX = {
-  // Single line (ASCII-safe)
-  TOP_LEFT: '+',
-  TOP_RIGHT: '+',
-  BOTTOM_LEFT: '+',
-  BOTTOM_RIGHT: '+',
-  HORIZONTAL: '-',
-  VERTICAL: '|',
-  T_DOWN: '+',
-  T_UP: '+',
-  T_RIGHT: '+',
-  T_LEFT: '+',
-  CROSS: '+',
+  // Single line
+  TOP_LEFT: '┌',
+  TOP_RIGHT: '┐',
+  BOTTOM_LEFT: '└',
+  BOTTOM_RIGHT: '┘',
+  HORIZONTAL: '─',
+  VERTICAL: '│',
+  T_DOWN: '┬',
+  T_UP: '┴',
+  T_RIGHT: '├',
+  T_LEFT: '┤',
+  CROSS: '┼',
 
-  // Double line (ASCII-safe)
-  D_TOP_LEFT: '+',
-  D_TOP_RIGHT: '+',
-  D_BOTTOM_LEFT: '+',
-  D_BOTTOM_RIGHT: '+',
-  D_HORIZONTAL: '=',
-  D_VERTICAL: '|',
-  D_T_DOWN: '+',
-  D_T_UP: '+',
-  D_T_RIGHT: '+',
-  D_LEFT: '+',
-  D_CROSS: '+',
+  // Double line
+  D_TOP_LEFT: '╔',
+  D_TOP_RIGHT: '╗',
+  D_BOTTOM_LEFT: '╚',
+  D_BOTTOM_RIGHT: '╝',
+  D_HORIZONTAL: '═',
+  D_VERTICAL: '║',
+  D_T_DOWN: '╦',
+  D_T_UP: '╩',
+  D_T_RIGHT: '╠',
+  D_LEFT: '╣',
+  D_CROSS: '╬',
 };
 
 /**
