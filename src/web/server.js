@@ -11,6 +11,7 @@ import { TelnetConnection } from '../telnet/connection.js';
 import { getConnections } from '../telnet/server.js';
 import { redeemDownloadToken } from '../services/DownloadTokenService.js';
 import { receiveMessage, processSyncQueue } from '../services/NetworkService.js';
+import getDatabase from '../database/db.js';
 import { fileURLToPath } from 'url';
 import { dirname, join, basename } from 'path';
 
@@ -264,7 +265,7 @@ export class WebServer {
       }
 
       // Simple API key validation — any valid linked BBS key works
-      const db = (await import('../database/db.js')).default();
+      const db = getDatabase();
       const link = db.prepare(
         'SELECT id FROM bbs_links WHERE api_key = ? AND enabled = 1'
       ).get(apiKey);
