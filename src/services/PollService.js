@@ -47,9 +47,9 @@ export class PollService {
 
       this.connection.write('\r\n');
 
-      let promptParts = ['[#] Vote', '[C]reate Poll', '[R]esults', '[Q]uit'];
+      let promptParts = ['[#] Vote', '[C]reate Poll', '[R]esults', '[E]dit Poll', '[Q]uit'];
       if (this.user.security_level >= 90) {
-        promptParts.splice(3, 0, '[D]elete Poll');
+        promptParts.splice(4, 0, '[D]elete Poll');
       }
       this.connection.write(colorText(promptParts.join('  '), 'yellow', null, true) + '\r\n');
 
@@ -69,6 +69,24 @@ export class PollService {
         const idx = parseInt(num) - 1;
         if (idx >= 0 && idx < polls.length) {
           await this.viewPoll(polls[idx].id);
+        }
+      } else if (choice === 'E') {
+        if (polls.length === 0) {
+          this.screen.messageBox('Info', 'No polls to edit.', 'info');
+          await this.connection.getChar();
+          continue;
+        }
+        const num = await this.connection.getInput('Poll number to edit: ');
+        const idx = parseInt(num) - 1;
+        if (idx >= 0 && idx < polls.length) {
+          const poll = polls[idx];
+          const canEdit = poll.created_by === this.user.id || this.user.security_level >= 90;
+          if (!canEdit) {
+            this.screen.messageBox('Error', 'You can only edit polls you created.', 'error');
+            await this.connection.getChar();
+          } else {
+            await this.editPoll(poll.id);
+          }
         }
       } else if (choice === 'D' && this.user.security_level >= 90) {
         if (polls.length === 0) {
@@ -246,6 +264,228 @@ export class PollService {
     });
 
     this.screen.messageBox('Success', 'Poll created successfully!', 'success');
+    await this.connection.getChar();
+  }
+
+  /**
+   * Edit an existing poll (creator or sysop only)
+   */
+  async editPoll(pollId) {
+    const db = getDatabase();
+
+    while (true) {
+      const poll = db.prepare('SELECT * FROM polls WHERE id = ?').get(pollId);
+      if (!poll) return;
+
+      const options = db.prepare(`
+        SELECT po.*,
+          (SELECT COUNT(*) FROM poll_votes WHERE option_id = po.id) as vote_count
+        FROM poll_options po
+        WHERE po.poll_id = ?
+        ORDER BY po.sort_order, po.id
+      `).all(pollId);
+
+      this.screen.clear();
+      this.connection.write('\r\n');
+      this.connection.write(colorText('EDIT POLL', 'yellow', null, true) + '\r\n');
+      this.connection.write(colorText(BOX.HORIZONTAL.repeat(80), 'cyan', null, true) + '\r\n\r\n');
+
+      this.connection.write(colorText('Question: ', 'white', null, true) + colorText(poll.question, 'cyan', null, true) + '\r\n');
+      this.connection.write(colorText('Status: ', 'white', null, true) + colorText(poll.is_active ? 'Active' : 'Inactive', poll.is_active ? 'green' : 'red', null, true) + '\r\n');
+      this.connection.write(colorText('Security Level: ', 'white', null, true) + colorText(String(poll.security_level), 'yellow') + '\r\n');
+      this.connection.write(colorText('Expires: ', 'white', null, true) + colorText(poll.expires_at || 'Never', 'yellow') + '\r\n\r\n');
+
+      this.connection.write(colorText('Options:', 'white', null, true) + '\r\n');
+      options.forEach((opt, idx) => {
+        this.connection.write(
+          colorText(`  ${idx + 1}. `, 'green', null, true) +
+          colorText(opt.option_text, 'white') +
+          colorText(` (${opt.vote_count} votes)`, 'cyan') +
+          '\r\n'
+        );
+      });
+
+      this.connection.write('\r\n');
+      this.connection.write(colorText('[Q] Change Question  [O] Edit Options  [T] Toggle Active/Inactive', 'yellow', null, true) + '\r\n');
+      let extraOpts = '[X] Set Expiry Date';
+      if (this.user.security_level >= 90) {
+        extraOpts += '  [S] Change Security Level';
+      }
+      extraOpts += '  [D] Done';
+      this.connection.write(colorText(extraOpts, 'yellow', null, true) + '\r\n\r\n');
+
+      const choice = (await this.connection.getInput('Edit> ')).toUpperCase();
+
+      if (choice === 'D') {
+        return;
+      } else if (choice === 'Q') {
+        await this._editQuestion(pollId, poll.question);
+      } else if (choice === 'O') {
+        await this._editOptions(pollId);
+      } else if (choice === 'T') {
+        const newState = poll.is_active ? 0 : 1;
+        db.prepare('UPDATE polls SET is_active = ? WHERE id = ?').run(newState, pollId);
+        this.screen.messageBox('Success', `Poll is now ${newState ? 'active' : 'inactive'}.`, 'success');
+        await this.connection.getChar();
+      } else if (choice === 'X') {
+        await this._editExpiry(pollId);
+      } else if (choice === 'S' && this.user.security_level >= 90) {
+        await this._editSecurityLevel(pollId);
+      }
+    }
+  }
+
+  /**
+   * Edit poll question
+   */
+  async _editQuestion(pollId, currentQuestion) {
+    const db = getDatabase();
+    this.connection.write('\r\n');
+    this.connection.write(colorText(`Current question: ${currentQuestion}`, 'white') + '\r\n');
+    const newQuestion = await this.connection.getInput('New question (blank to cancel): ');
+    if (!newQuestion) return;
+
+    db.prepare('UPDATE polls SET question = ? WHERE id = ?').run(newQuestion, pollId);
+    this.screen.messageBox('Success', 'Question updated.', 'success');
+    await this.connection.getChar();
+  }
+
+  /**
+   * Edit poll options sub-menu
+   */
+  async _editOptions(pollId) {
+    const db = getDatabase();
+
+    while (true) {
+      const options = db.prepare(`
+        SELECT po.*,
+          (SELECT COUNT(*) FROM poll_votes WHERE option_id = po.id) as vote_count
+        FROM poll_options po
+        WHERE po.poll_id = ?
+        ORDER BY po.sort_order, po.id
+      `).all(pollId);
+
+      this.screen.clear();
+      this.connection.write('\r\n');
+      this.connection.write(colorText('EDIT OPTIONS', 'yellow', null, true) + '\r\n');
+      this.connection.write(colorText(BOX.HORIZONTAL.repeat(80), 'cyan', null, true) + '\r\n\r\n');
+
+      options.forEach((opt, idx) => {
+        this.connection.write(
+          colorText(`  ${idx + 1}. `, 'green', null, true) +
+          colorText(opt.option_text, 'white') +
+          colorText(` (${opt.vote_count} votes)`, 'cyan') +
+          '\r\n'
+        );
+      });
+
+      this.connection.write('\r\n');
+      this.connection.write(colorText('[E]dit Option  [A]dd Option  [R]emove Option  [D]one', 'yellow', null, true) + '\r\n\r\n');
+
+      const choice = (await this.connection.getInput('Options> ')).toUpperCase();
+
+      if (choice === 'D') {
+        return;
+      } else if (choice === 'E') {
+        const num = await this.connection.getInput(`Option number to edit [1-${options.length}]: `);
+        const idx = parseInt(num) - 1;
+        if (idx >= 0 && idx < options.length) {
+          this.connection.write(colorText(`Current text: ${options[idx].option_text}`, 'white') + '\r\n');
+          const newText = await this.connection.getInput('New text (blank to cancel): ');
+          if (newText) {
+            db.prepare('UPDATE poll_options SET option_text = ? WHERE id = ?').run(newText, options[idx].id);
+            this.screen.messageBox('Success', 'Option updated.', 'success');
+            await this.connection.getChar();
+          }
+        }
+      } else if (choice === 'A') {
+        if (options.length >= 10) {
+          this.screen.messageBox('Error', 'Maximum of 10 options reached.', 'error');
+          await this.connection.getChar();
+          continue;
+        }
+        const newText = await this.connection.getInput('New option text (blank to cancel): ');
+        if (newText) {
+          const maxOrder = options.length > 0 ? Math.max(...options.map(o => o.sort_order)) : 0;
+          db.prepare('INSERT INTO poll_options (poll_id, option_text, sort_order) VALUES (?, ?, ?)').run(pollId, newText, maxOrder + 1);
+          this.screen.messageBox('Success', 'Option added.', 'success');
+          await this.connection.getChar();
+        }
+      } else if (choice === 'R') {
+        if (options.length <= 2) {
+          this.screen.messageBox('Error', 'A poll must have at least 2 options.', 'error');
+          await this.connection.getChar();
+          continue;
+        }
+        const num = await this.connection.getInput(`Option number to remove [1-${options.length}]: `);
+        const idx = parseInt(num) - 1;
+        if (idx >= 0 && idx < options.length) {
+          if (options[idx].vote_count > 0) {
+            this.screen.messageBox('Error', 'Cannot remove an option that has votes.', 'error');
+            await this.connection.getChar();
+          } else {
+            this.connection.write(colorText(`Remove "${options[idx].option_text}"? (Y/N): `, 'yellow', null, true));
+            const confirm = (await this.connection.getInput()).toUpperCase();
+            if (confirm === 'Y') {
+              db.prepare('DELETE FROM poll_options WHERE id = ?').run(options[idx].id);
+              this.screen.messageBox('Success', 'Option removed.', 'success');
+              await this.connection.getChar();
+            }
+          }
+        }
+      }
+    }
+  }
+
+  /**
+   * Edit poll expiry date
+   */
+  async _editExpiry(pollId) {
+    const db = getDatabase();
+    this.connection.write('\r\n');
+    const dateInput = await this.connection.getInput('Expiry date (YYYY-MM-DD, blank to clear): ');
+    if (dateInput === '') {
+      db.prepare('UPDATE polls SET expires_at = NULL WHERE id = ?').run(pollId);
+      this.screen.messageBox('Success', 'Expiry date cleared.', 'success');
+      await this.connection.getChar();
+      return;
+    }
+
+    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+    if (!dateRegex.test(dateInput)) {
+      this.screen.messageBox('Error', 'Invalid date format. Use YYYY-MM-DD.', 'error');
+      await this.connection.getChar();
+      return;
+    }
+
+    const parsed = new Date(dateInput);
+    if (isNaN(parsed.getTime())) {
+      this.screen.messageBox('Error', 'Invalid date.', 'error');
+      await this.connection.getChar();
+      return;
+    }
+
+    db.prepare('UPDATE polls SET expires_at = ? WHERE id = ?').run(dateInput, pollId);
+    this.screen.messageBox('Success', `Expiry set to ${dateInput}.`, 'success');
+    await this.connection.getChar();
+  }
+
+  /**
+   * Edit poll security level (sysop only)
+   */
+  async _editSecurityLevel(pollId) {
+    const db = getDatabase();
+    this.connection.write('\r\n');
+    const levelInput = await this.connection.getInput('New security level (10-99): ');
+    const parsed = parseInt(levelInput);
+    if (isNaN(parsed) || parsed < 10 || parsed > 99) {
+      this.screen.messageBox('Error', 'Invalid level. Must be 10-99.', 'error');
+      await this.connection.getChar();
+      return;
+    }
+
+    db.prepare('UPDATE polls SET security_level = ? WHERE id = ?').run(parsed, pollId);
+    this.screen.messageBox('Success', `Security level set to ${parsed}.`, 'success');
     await this.connection.getChar();
   }
 

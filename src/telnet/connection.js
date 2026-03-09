@@ -2,7 +2,7 @@
  * Telnet Connection Handler
  */
 import { BBSScreen } from '../utils/screen.js';
-import { ANSI, colorText } from '../utils/ansi.js';
+import { ANSI, colorText, utf8ToCp437Buffer } from '../utils/ansi.js';
 import { User } from '../models/User.js';
 import { Session } from '../models/Session.js';
 import { MainMenu } from '../services/menus/MainMenu.js';
@@ -127,6 +127,9 @@ export class TelnetConnection {
       // Line mode - buffer until newline
       for (const char of input) {
         if (char === '\r' || char === '\n') {
+          // Echo the newline back to the terminal (server is in WILL ECHO mode)
+          this.socket.write('\r\n');
+
           // Always trigger callback on ENTER, even with empty buffer
           const line = this.inputBuffer.trim();
           this.inputBuffer = '';
@@ -192,9 +195,6 @@ export class TelnetConnection {
       this.inputMode = 'line';
       this.inputCallback = (input) => {
         this.inputCallback = null;
-        if (!echo) {
-          this.write('\r\n');
-        }
         resolve(input);
       };
     });
@@ -218,7 +218,11 @@ export class TelnetConnection {
    * Write to socket
    */
   write(text) {
-    this.socket.write(text);
+    if (this.protocol === 'telnet') {
+      this.socket.write(utf8ToCp437Buffer(text));
+    } else {
+      this.socket.write(text);
+    }
   }
 
   /**
