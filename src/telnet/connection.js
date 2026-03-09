@@ -7,6 +7,7 @@ import { User } from '../models/User.js';
 import { Session } from '../models/Session.js';
 import { MainMenu } from '../services/menus/MainMenu.js';
 import { LoginSequence } from '../services/LoginSequence.js';
+import { removeFromAllRooms } from '../services/ChatRoomManager.js';
 import config from '../config/index.js';
 
 export class TelnetConnection {
@@ -21,6 +22,17 @@ export class TelnetConnection {
     this.inputCallback = null;
     this.currentMenu = null;
     this.connectTime = new Date();
+
+    // Node numbering (assigned by server after construction)
+    this.nodeNumber = null;
+
+    // Activity tracking
+    this.activity = 'Logging in';
+
+    // Chat / paging support
+    this.chatPartner = null;
+    this.pageQueue = [];
+    this.chatMessageHandler = null;
 
     // Telnet negotiation
     this.setupTelnet();
@@ -208,6 +220,8 @@ export class TelnetConnection {
         this.screen.messageBox('Welcome', `Welcome back, ${user.username}!`, 'success');
         await this.getChar();
 
+        this.setActivity('Main Menu');
+
         // Run login sequence then enter main menu
         const loginSeq = new LoginSequence(this);
         await loginSeq.show();
@@ -274,6 +288,8 @@ export class TelnetConnection {
       this.screen.messageBox('Success', 'Your account has been created successfully!', 'success');
       await this.getChar();
 
+      this.setActivity('Main Menu');
+
       // Run login sequence then enter main menu
       const loginSeq = new LoginSequence(this);
       await loginSeq.show();
@@ -294,6 +310,14 @@ export class TelnetConnection {
   }
 
   /**
+   * Update the current activity string (shown in Who's Online)
+   * @param {string} activity
+   */
+  setActivity(activity) {
+    this.activity = activity;
+  }
+
+  /**
    * Check if authenticated
    */
   isAuthenticated() {
@@ -304,6 +328,9 @@ export class TelnetConnection {
    * Cleanup on disconnect
    */
   cleanup() {
+    // Remove from any chat rooms the user was in
+    removeFromAllRooms(this);
+
     if (this.session) {
       // Update time online
       const duration = Math.floor((Date.now() - this.connectTime.getTime()) / 1000);

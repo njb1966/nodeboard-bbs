@@ -5,8 +5,10 @@ import getDatabase from '../database/db.js';
 import { User } from '../models/User.js';
 import { Session } from '../models/Session.js';
 import { colorText } from '../utils/ansi.js';
+import { BOX } from '../utils/ansi.js';
 import { wordWrap } from '../utils/text.js';
 import config from '../config/index.js';
+import { getConnections } from '../telnet/server.js';
 
 export class UserService {
   constructor(connection) {
@@ -60,43 +62,55 @@ export class UserService {
   }
 
   /**
-   * Show who's online
+   * Show who's online (live connection data with node numbers and activity)
    */
   async showWhosOnline() {
-    const sessions = Session.getActive();
+    const connections = getConnections();
 
     this.screen.clear();
     this.connection.write('\r\n');
-    this.connection.write(colorText('WHO\'S ONLINE', 'yellow', null, true) + '\r\n');
-    this.connection.write(colorText('-'.repeat(80), 'cyan') + '\r\n');
+    this.connection.write(colorText('  Who\'s Online', 'yellow', null, true) + '\r\n');
+    this.connection.write(colorText('  ' + BOX.D_HORIZONTAL.repeat(57), 'cyan', null, true) + '\r\n');
 
-    if (sessions.length === 0) {
-      this.connection.write(colorText('No users currently online.', 'white') + '\r\n');
+    // Column headers
+    this.connection.write(
+      colorText('  Node', 'white', null, true) + '  ' +
+      colorText('Username', 'white', null, true) + '          ' +
+      colorText('Activity', 'white', null, true) + '              ' +
+      colorText('Time On', 'white', null, true) + '\r\n'
+    );
+    this.connection.write(colorText('  ' + BOX.HORIZONTAL.repeat(57), 'cyan') + '\r\n');
+
+    let onlineCount = 0;
+
+    // Sort connections by node number for display
+    const sorted = [...connections.values()]
+      .filter(conn => conn.isAuthenticated())
+      .sort((a, b) => (a.nodeNumber || 0) - (b.nodeNumber || 0));
+
+    if (sorted.length === 0) {
+      this.connection.write(colorText('  No users currently online.', 'white') + '\r\n');
     } else {
-      this.connection.write(
-        colorText('USER', 'white', null, true) + '                  ' +
-        colorText('LOCATION', 'white', null, true) + '               ' +
-        colorText('ONLINE FOR', 'white', null, true) + '\r\n'
-      );
-      this.connection.write(colorText('-'.repeat(80), 'cyan') + '\r\n');
-
-      sessions.forEach(session => {
-        const username = (session.username || 'Guest').padEnd(20);
-        const location = (session.ip_address || 'Unknown').padEnd(20);
-        const duration = Math.floor(session.getDuration() / 60);
-        const timeStr = `${duration} min${duration !== 1 ? 's' : ''}`;
+      for (const conn of sorted) {
+        const node = (conn.nodeNumber != null ? conn.nodeNumber.toString() : '?').padStart(4);
+        const username = (conn.user.username || 'Guest').padEnd(18);
+        const activity = (conn.activity || 'Unknown').padEnd(22);
+        const minutes = Math.floor((Date.now() - conn.connectTime.getTime()) / 60000);
+        const timeStr = `${minutes} min`;
 
         this.connection.write(
+          colorText('  ' + node, 'green', null, true) + '  ' +
           colorText(username, 'cyan') +
-          colorText(location, 'white') +
+          colorText(activity, 'white') +
           colorText(timeStr, 'green') + '\r\n'
         );
-      });
+        onlineCount++;
+      }
     }
 
-    this.connection.write('\r\n');
-    this.connection.write(colorText(`Total online: ${sessions.length}`, 'yellow', null, true) + '\r\n\r\n');
-    this.connection.write(colorText('Press any key to continue...', 'white') + '\r\n');
+    this.connection.write(colorText('  ' + BOX.D_HORIZONTAL.repeat(57), 'cyan', null, true) + '\r\n');
+    this.connection.write(colorText(`  ${onlineCount} user${onlineCount !== 1 ? 's' : ''} online`, 'yellow', null, true) + '\r\n\r\n');
+    this.connection.write(colorText('  Press any key to continue...', 'white') + '\r\n');
     await this.connection.getChar();
   }
 

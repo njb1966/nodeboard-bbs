@@ -6,11 +6,68 @@ import config from '../config/index.js';
 import { TelnetConnection } from './connection.js';
 import { Session } from '../models/Session.js';
 
+/** @type {TelnetServer|null} Singleton server instance for cross-module access */
+let serverInstance = null;
+
+/**
+ * Get all active connections.
+ * Safe to import from other modules — returns the live Map at call time,
+ * avoiding circular-dependency issues at module-load time.
+ * @returns {Map<string, TelnetConnection>}
+ */
+export function getConnections() {
+  if (!serverInstance) return new Map();
+  return serverInstance.connections;
+}
+
+/**
+ * Find a connection by its assigned node number.
+ * @param {number} nodeNum
+ * @returns {TelnetConnection|undefined}
+ */
+export function getConnectionByNode(nodeNum) {
+  if (!serverInstance) return undefined;
+  for (const conn of serverInstance.connections.values()) {
+    if (conn.nodeNumber === nodeNum) return conn;
+  }
+  return undefined;
+}
+
 export class TelnetServer {
   constructor() {
     this.server = null;
     this.connections = new Map();
     this.config = config.bbs;
+
+    // Node number allocation pool (1 .. maxConnections)
+    this.availableNodes = new Set();
+    for (let i = 1; i <= this.config.maxConnections; i++) {
+      this.availableNodes.add(i);
+    }
+
+    // Register singleton so helper functions work
+    serverInstance = this;
+  }
+
+  /**
+   * Allocate the lowest available node number
+   * @returns {number}
+   */
+  allocateNode() {
+    const sorted = [...this.availableNodes].sort((a, b) => a - b);
+    const node = sorted[0];
+    this.availableNodes.delete(node);
+    return node;
+  }
+
+  /**
+   * Return a node number to the pool
+   * @param {number} nodeNum
+   */
+  releaseNode(nodeNum) {
+    if (nodeNum != null) {
+      this.availableNodes.add(nodeNum);
+    }
   }
 
   /**
@@ -53,19 +110,25 @@ export class TelnetServer {
       return;
     }
 
-    // Create connection handler
+    // Create connection handler and assign node number
     const connection = new TelnetConnection(socket, remoteAddress);
+    const nodeNum = this.allocateNode();
+    connection.nodeNumber = nodeNum;
     this.connections.set(connId, connection);
+
+    console.log(`Assigned node ${nodeNum} to ${connId}`);
 
     // Handle disconnection
     socket.on('close', () => {
-      console.log(`Connection closed: ${connId}`);
+      console.log(`Connection closed: ${connId} (node ${connection.nodeNumber})`);
       connection.cleanup();
+      this.releaseNode(connection.nodeNumber);
       this.connections.delete(connId);
     });
 
     socket.on('error', (err) => {
       console.error(`Socket error for ${connId}:`, err.message);
+      this.releaseNode(connection.nodeNumber);
       this.connections.delete(connId);
     });
 
@@ -80,6 +143,7 @@ export class TelnetServer {
     if (this.server) {
       // Close all connections
       for (const connection of this.connections.values()) {
+        this.releaseNode(connection.nodeNumber);
         connection.cleanup();
       }
       this.connections.clear();

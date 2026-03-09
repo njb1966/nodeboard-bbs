@@ -13,6 +13,9 @@ import { FileService } from '../FileService.js';
 import { DoorService } from '../DoorService.js';
 import { UserService } from '../UserService.js';
 import { SysopService } from '../SysopService.js';
+import { OneLinerService } from '../OneLinerService.js';
+import { PollService } from '../PollService.js';
+import { ChatService } from '../ChatService.js';
 
 export class MainMenu {
   constructor(connection) {
@@ -31,23 +34,38 @@ export class MainMenu {
     // Register all action handlers
 
     engine.registerAction('forums', async () => {
+      this.connection.setActivity('Reading Forums');
       const forumService = new ForumService(this.connection);
       await forumService.show();
+      this.connection.setActivity('Main Menu');
+    });
+
+    engine.registerAction('newScan', async () => {
+      this.connection.setActivity('Reading Forums');
+      const forumService = new ForumService(this.connection);
+      await forumService.newScan();
+      this.connection.setActivity('Main Menu');
     });
 
     engine.registerAction('mail', async () => {
+      this.connection.setActivity('Reading Mail');
       const messageService = new MessageService(this.connection);
       await messageService.show();
+      this.connection.setActivity('Main Menu');
     });
 
     engine.registerAction('files', async () => {
+      this.connection.setActivity('Browsing Files');
       const fileService = new FileService(this.connection);
       await fileService.show();
+      this.connection.setActivity('Main Menu');
     });
 
     engine.registerAction('doors', async () => {
+      this.connection.setActivity('Playing Door Games');
       const doorService = new DoorService(this.connection);
       await doorService.show();
+      this.connection.setActivity('Main Menu');
     });
 
     engine.registerAction('userList', async () => {
@@ -66,13 +84,38 @@ export class MainMenu {
     });
 
     engine.registerAction('settings', async () => {
+      this.connection.setActivity('User Settings');
       const userService = new UserService(this.connection);
       await userService.showSettings();
+      this.connection.setActivity('Main Menu');
     });
 
     engine.registerAction('sysopAdmin', async () => {
+      this.connection.setActivity('Sysop Admin');
       const sysopService = new SysopService(this.connection);
       await sysopService.show();
+      this.connection.setActivity('Main Menu');
+    });
+
+    engine.registerAction('oneliners', async () => {
+      this.connection.setActivity('OneLiners');
+      const service = new OneLinerService(this.connection);
+      await service.show();
+      this.connection.setActivity('Main Menu');
+    });
+
+    engine.registerAction('polls', async () => {
+      this.connection.setActivity('Voting Booth');
+      const service = new PollService(this.connection);
+      await service.show();
+      this.connection.setActivity('Main Menu');
+    });
+
+    engine.registerAction('chat', async () => {
+      this.connection.setActivity('Chat/Paging');
+      const chatService = new ChatService(this.connection);
+      await chatService.show();
+      this.connection.setActivity('Main Menu');
     });
 
     engine.registerAction('goodbye', async () => {

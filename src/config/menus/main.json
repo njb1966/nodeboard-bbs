@@ -5,13 +5,17 @@
   "art": "mainmenu.ans",
   "items": [
     { "key": "M", "text": "Message Forums", "action": "forums" },
+    { "key": "N", "text": "New Message Scan", "action": "newScan" },
     { "key": "P", "text": "Private Mail", "action": "mail", "badge": "unreadMail" },
     { "key": "F", "text": "File Areas", "action": "files" },
     { "key": "D", "text": "Door Games", "action": "doors" },
     { "key": "U", "text": "User List", "action": "userList" },
     { "key": "W", "text": "Who's Online", "action": "whosOnline" },
+    { "key": "C", "text": "Chat/Page User", "action": "chat" },
     { "key": "B", "text": "Bulletins", "action": "bulletins" },
     { "key": "S", "text": "User Settings", "action": "settings" },
+    { "key": "O", "text": "OneLiners", "action": "oneliners" },
+    { "key": "V", "text": "Voting Booth", "action": "polls" },
     { "key": "G", "text": "Goodbye (Logoff)", "action": "goodbye" },
     { "key": "A", "text": "Sysop Admin", "action": "sysopAdmin", "minSecurity": 90 }
   ]

@@ -182,7 +182,7 @@ export class ForumService {
   }
 
   /**
-   * Reply to message
+   * Reply to message (with quoting)
    */
   async replyToMessage(originalMessage, forum) {
     this.screen.clear();
@@ -190,9 +190,25 @@ export class ForumService {
     this.connection.write(colorText('REPLY TO MESSAGE', 'yellow', null, true) + '\r\n');
     this.connection.write(colorText('-'.repeat(80), 'cyan') + '\r\n\r\n');
 
-    this.connection.write('\r\nEnter your reply (type . on a line by itself to end):\r\n\r\n');
+    // Build quoted text from original message
+    const quoteDate = new Date(originalMessage.created_at).toLocaleString();
+    const quoteHeader = `On ${quoteDate}, ${originalMessage.username} wrote:`;
+    const quotedLines = [quoteHeader];
+    const originalLines = originalMessage.body.split('\n');
+    for (const line of originalLines) {
+      quotedLines.push('> ' + line);
+    }
+    quotedLines.push('');  // blank line separator before new text
 
-    const body = await this.getMultiLineInput();
+    // Show quoted text to the user
+    this.connection.write(colorText('Quoted text included:', 'cyan') + '\r\n');
+    quotedLines.forEach((line, idx) => {
+      this.connection.write(colorText(`${idx + 1}: `, 'green') + line + '\r\n');
+    });
+
+    this.connection.write('\r\nEnter your reply below (type . on a line by itself to end):\r\n\r\n');
+
+    const body = await this.getMultiLineInput(quotedLines);
     if (!body) return;
 
     const db = getDatabase();
@@ -213,10 +229,11 @@ export class ForumService {
 
   /**
    * Get multi-line input
+   * @param {string[]} [prefill] - Optional array of lines to pre-populate
    */
-  async getMultiLineInput() {
-    const lines = [];
-    let lineNum = 1;
+  async getMultiLineInput(prefill = null) {
+    const lines = prefill ? [...prefill] : [];
+    let lineNum = lines.length + 1;
 
     while (true) {
       this.connection.write(colorText(`${lineNum}: `, 'green'));
@@ -240,6 +257,120 @@ export class ForumService {
     }
 
     return lines.join('\n');
+  }
+
+  /**
+   * New message scan - find messages posted since user's last login
+   */
+  async newScan() {
+    const db = getDatabase();
+
+    // Get user's last login timestamp
+    const userRow = db.prepare('SELECT last_login FROM users WHERE id = ?').get(this.user.id);
+    const lastLogin = userRow.last_login || '1970-01-01T00:00:00';
+
+    // Get all forums the user has access to
+    const forums = db.prepare(`
+      SELECT * FROM forums
+      WHERE security_level <= ?
+      ORDER BY id
+    `).all(this.user.security_level);
+
+    // Count new messages per forum
+    const forumsWithNew = [];
+    let totalNew = 0;
+
+    for (const forum of forums) {
+      const result = db.prepare(`
+        SELECT COUNT(*) as count FROM messages
+        WHERE forum_id = ? AND created_at > ?
+      `).get(forum.id, lastLogin);
+
+      if (result.count > 0) {
+        forumsWithNew.push({ forum, count: result.count });
+        totalNew += result.count;
+      }
+    }
+
+    // Display scan results
+    this.screen.clear();
+    this.connection.write('\r\n');
+    this.connection.write(colorText('New Message Scan', 'yellow', null, true) + '\r\n');
+    this.connection.write(colorText('─'.repeat(40), 'cyan') + '\r\n');
+
+    if (totalNew === 0) {
+      this.connection.write(colorText('No new messages since your last login.', 'white') + '\r\n\r\n');
+      this.connection.write(colorText('Press any key to continue...', 'cyan'));
+      await this.connection.getChar();
+      return;
+    }
+
+    for (const entry of forumsWithNew) {
+      const label = entry.forum.name + ':';
+      const msgText = entry.count === 1 ? '1 new message' : `${entry.count} new messages`;
+      this.connection.write(
+        colorText(label.padEnd(25), 'white') +
+        colorText(msgText, 'green') + '\r\n'
+      );
+    }
+
+    this.connection.write(colorText('─'.repeat(40), 'cyan') + '\r\n');
+    this.connection.write(
+      colorText(`Total: ${totalNew} new message${totalNew === 1 ? '' : 's'} across ${forumsWithNew.length} forum${forumsWithNew.length === 1 ? '' : 's'}`, 'yellow', null, true) + '\r\n\r\n'
+    );
+
+    this.connection.write(colorText('[R]ead new messages  [Q]uit: ', 'yellow', null, true));
+    const choice = (await this.connection.getInput()).toUpperCase();
+
+    if (choice === 'R') {
+      await this.readNewMessages(forumsWithNew, lastLogin);
+    }
+  }
+
+  /**
+   * Read new messages across forums
+   */
+  async readNewMessages(forumsWithNew, lastLogin) {
+    const db = getDatabase();
+
+    for (const entry of forumsWithNew) {
+      const messages = db.prepare(`
+        SELECT m.*, u.username
+        FROM messages m
+        JOIN users u ON m.user_id = u.id
+        WHERE m.forum_id = ? AND m.created_at > ?
+        ORDER BY m.created_at
+      `).all(entry.forum.id, lastLogin);
+
+      for (let i = 0; i < messages.length; i++) {
+        const message = messages[i];
+
+        this.screen.clear();
+        this.connection.write('\r\n');
+        this.connection.write(colorText(`Forum: ${entry.forum.name}`, 'cyan', null, true) +
+          colorText(` (${i + 1} of ${messages.length})`, 'white') + '\r\n');
+        this.connection.write(colorText('='.repeat(80), 'cyan', null, true) + '\r\n');
+        this.connection.write(colorText(`Subject: ${message.subject}`, 'yellow', null, true) + '\r\n');
+        this.connection.write(colorText(`From: ${message.username}`, 'white') + '\r\n');
+        this.connection.write(colorText(`Date: ${new Date(message.created_at).toLocaleString()}`, 'white') + '\r\n');
+        this.connection.write(colorText('='.repeat(80), 'cyan', null, true) + '\r\n\r\n');
+        this.connection.write(wordWrap(message.body) + '\r\n\r\n');
+
+        this.connection.write(colorText('[N]ext  [R]eply  [Q]uit: ', 'yellow', null, true));
+        const action = (await this.connection.getInput()).toUpperCase();
+
+        if (action === 'Q') {
+          return;
+        } else if (action === 'R') {
+          await this.replyToMessage(message, entry.forum);
+        }
+        // 'N' or anything else continues to next message
+      }
+    }
+
+    this.connection.write('\r\n' + colorText('No more new messages.', 'yellow') + '\r\n');
+    this.connection.write(colorText('Press any key to continue...', 'cyan'));
+    await this.connection.getChar();
   }
 }
 

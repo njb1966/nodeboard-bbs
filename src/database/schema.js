@@ -137,6 +137,17 @@ export const SCHEMA = {
     )
   `,
 
+  oneliners: `
+    CREATE TABLE IF NOT EXISTS oneliners (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      username TEXT NOT NULL,
+      message TEXT NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    )
+  `,
+
   bulletins: `
     CREATE TABLE IF NOT EXISTS bulletins (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -150,6 +161,45 @@ export const SCHEMA = {
       FOREIGN KEY (author_id) REFERENCES users(id) ON DELETE CASCADE
     )
   `,
+
+  polls: `
+    CREATE TABLE IF NOT EXISTS polls (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      question TEXT NOT NULL,
+      created_by INTEGER NOT NULL,
+      created_by_name TEXT NOT NULL,
+      security_level INTEGER DEFAULT 10,
+      is_active INTEGER DEFAULT 1,
+      allow_multiple INTEGER DEFAULT 0,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      expires_at DATETIME,
+      FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE CASCADE
+    )
+  `,
+
+  poll_options: `
+    CREATE TABLE IF NOT EXISTS poll_options (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      poll_id INTEGER NOT NULL,
+      option_text TEXT NOT NULL,
+      sort_order INTEGER DEFAULT 0,
+      FOREIGN KEY (poll_id) REFERENCES polls(id) ON DELETE CASCADE
+    )
+  `,
+
+  poll_votes: `
+    CREATE TABLE IF NOT EXISTS poll_votes (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      poll_id INTEGER NOT NULL,
+      option_id INTEGER NOT NULL,
+      user_id INTEGER NOT NULL,
+      voted_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (poll_id) REFERENCES polls(id) ON DELETE CASCADE,
+      FOREIGN KEY (option_id) REFERENCES poll_options(id) ON DELETE CASCADE,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+      UNIQUE(poll_id, user_id)
+    )
+  `,
 };
 
 export const INDEXES = [
@@ -161,6 +211,9 @@ export const INDEXES = [
   'CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id)',
   'CREATE INDEX IF NOT EXISTS idx_logs_user ON system_logs(user_id)',
   'CREATE INDEX IF NOT EXISTS idx_logs_type ON system_logs(log_type)',
+  'CREATE INDEX IF NOT EXISTS idx_oneliners_created ON oneliners(created_at)',
+  'CREATE INDEX IF NOT EXISTS idx_poll_options_poll ON poll_options(poll_id)',
+  'CREATE INDEX IF NOT EXISTS idx_poll_votes_poll_user ON poll_votes(poll_id, user_id)',
 ];
 
 export const DEFAULT_DATA = {

@@ -5,6 +5,7 @@
  * definition object, renders the menu via BBSScreen.menu(), resolves badges,
  * filters items by security level, and dispatches actions through a registry.
  */
+import { colorText } from '../../utils/ansi.js';
 
 /**
  * Badge resolver functions.
@@ -81,12 +82,48 @@ export class MenuEngine {
   }
 
   /**
+   * Process any pending page (chat) requests queued on this connection.
+   * Prompts the user to accept or decline each request.
+   */
+  async handlePendingPages() {
+    while (this.connection.pageQueue && this.connection.pageQueue.length > 0) {
+      const page = this.connection.pageQueue.shift();
+
+      this.connection.write('\r\n');
+      this.connection.write(
+        colorText('*** Chat request from ' + page.fromUsername + ' (Node ' + page.fromNode + ') ***', 'yellow', null, true) + '\r\n'
+      );
+      const answer = await this.connection.getInput(
+        colorText('[A]ccept  [D]ecline: ', 'white', null, true)
+      );
+
+      if (answer.toUpperCase() === 'A') {
+        // Create a promise that the initiator's splitChat will resolve when chat ends.
+        // The chatDone promise is stored on the connection so splitChat can resolve it.
+        const chatDonePromise = new Promise((resolve) => {
+          this.connection._chatDoneResolve = resolve;
+        });
+
+        page.resolve('accepted');
+
+        // Wait for the chat session to finish (driven by the initiator's splitChat)
+        await chatDonePromise;
+      } else {
+        page.resolve('declined');
+      }
+    }
+  }
+
+  /**
    * Run the menu loop. Renders the menu, waits for input, dispatches the
    * matching action. Returns when a "goodbye" or "quit" action is triggered,
    * or when the registered handler returns a truthy value to signal exit.
    */
   async show() {
     while (true) {
+      // Check for pending page requests before showing the menu
+      await this.handlePendingPages();
+
       const items = this.buildMenuItems();
 
       this.screen.menu(
