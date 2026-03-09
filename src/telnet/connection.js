@@ -25,7 +25,7 @@ export class TelnetConnection {
     this.socket = socket;
     this.remoteAddress = remoteAddress;
     this.protocol = options.protocol || 'telnet';
-    this.screen = new BBSScreen(socket);
+    this.screen = new BBSScreen(socket, (text) => this.write(text));
     this.user = options.user || null;
     this.session = null;
     this.inputBuffer = '';

@@ -60,8 +60,9 @@ export class Screen {
  * Terminal UI Helper for BBS screens
  */
 export class BBSScreen {
-  constructor(socket) {
+  constructor(socket, writeFn) {
     this.socket = socket;
+    this._writeFn = writeFn || null;
     this.width = 80;
     this.height = 24;
   }
@@ -70,7 +71,11 @@ export class BBSScreen {
    * Send raw output
    */
   write(text) {
-    this.socket.write(text);
+    if (this._writeFn) {
+      this._writeFn(text);
+    } else {
+      this.socket.write(text);
+    }
   }
 
   /**
