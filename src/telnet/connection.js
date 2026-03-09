@@ -13,6 +13,19 @@ import { AchievementService } from '../services/AchievementService.js';
 import { logEvent } from '../services/LogService.js';
 import config from '../config/index.js';
 
+/**
+ * Initialise the screen's status bar context after a user has authenticated.
+ * @param {TelnetConnection} conn
+ */
+function initScreenContext(conn) {
+  conn.screen.setContext({
+    bbsName: config.bbs.name,
+    nodeNumber: conn.nodeNumber || '?',
+    username: conn.user ? conn.user.username : 'Guest',
+    activity: conn.activity || 'Main Menu',
+  });
+}
+
 export class TelnetConnection {
   /**
    * @param {import('net').Socket|import('stream').Duplex} socket - TCP socket or SSH channel
@@ -77,7 +90,7 @@ export class TelnetConnection {
       this.user.updateLastLogin();
       this.session = Session.create(this.user.id, this.user.username, this.remoteAddress);
 
-      this.screen.welcomeScreen(config.bbs.name, config.bbs.version);
+      await this.screen.welcomeScreen(config.bbs.name, config.bbs.version);
       this.screen.messageBox('Welcome', `Welcome back, ${this.user.username}!`, 'success');
       await this.getChar();
 
@@ -89,6 +102,7 @@ export class TelnetConnection {
       }
 
       this.setActivity('Main Menu');
+      initScreenContext(this);
 
       const loginSeq = new LoginSequence(this);
       await loginSeq.show();
@@ -96,7 +110,7 @@ export class TelnetConnection {
       return;
     }
 
-    this.screen.welcomeScreen(config.bbs.name, config.bbs.version);
+    await this.screen.welcomeScreen(config.bbs.name, config.bbs.version);
     await this.login();
   }
 
@@ -303,6 +317,7 @@ export class TelnetConnection {
         }
 
         this.setActivity('Main Menu');
+        initScreenContext(this);
 
         // Run login sequence then enter main menu
         const loginSeq = new LoginSequence(this);
@@ -391,6 +406,7 @@ export class TelnetConnection {
       }
 
       this.setActivity('Main Menu');
+      initScreenContext(this);
 
       // Run login sequence then enter main menu
       const loginSeq = new LoginSequence(this);
@@ -417,6 +433,7 @@ export class TelnetConnection {
    */
   setActivity(activity) {
     this.activity = activity;
+    this.screen.updateActivity(activity);
   }
 
   /**

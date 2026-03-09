@@ -124,6 +124,9 @@ export class MenuEngine {
       // Check for pending page requests before showing the menu
       await this.handlePendingPages();
 
+      // Update bottom status bar with current menu name
+      this.screen.updateActivity(this.menuDef.title);
+
       const items = this.buildMenuItems();
 
       this.screen.menu(
