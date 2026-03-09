@@ -6,6 +6,7 @@
  */
 import getDatabase from '../database/db.js';
 import { ANSI, BOX, colorText, padText } from '../utils/ansi.js';
+import { queueScoreForSync, isNetworkConfigured, getNetworkScores } from './NetworkService.js';
 
 // ─── Trivia Questions ──────────────────────────────────────────────────────────
 
@@ -437,10 +438,11 @@ export class GameService {
 
     const games = ['Trivia Challenge', 'Hangman', 'Number Guesser'];
     const db = getDatabase();
+    const showNetwork = isNetworkConfigured();
 
     for (const gameName of games) {
       this.connection.write('\r\n');
-      this.connection.write(colorText(`  ${gameName}`, 'green', null, true) + '\r\n');
+      this.connection.write(colorText(`  ${gameName} - Local Top 10`, 'green', null, true) + '\r\n');
       this.connection.write(colorText('  ' + BOX.HORIZONTAL.repeat(41), 'cyan') + '\r\n');
 
       const scores = db.prepare(`
@@ -453,27 +455,54 @@ export class GameService {
 
       if (scores.length === 0) {
         this.connection.write(colorText('  No scores yet.', 'white') + '\r\n');
-        continue;
+      } else {
+        // Header
+        this.connection.write(
+          colorText('  ' + padText('Rank', 6) + padText('Player', 20) + padText('Score', 8) + 'Date', 'white', null, true) + '\r\n'
+        );
+
+        for (let i = 0; i < scores.length; i++) {
+          const s = scores[i];
+          const dateStr = s.played_at
+            ? new Date(s.played_at + 'Z').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+            : '';
+          const rankColor = i === 0 ? 'yellow' : i === 1 ? 'white' : i === 2 ? 'cyan' : 'white';
+          this.connection.write(
+            colorText('  ' + padText(`${i + 1}`, 6), rankColor, null, i < 3) +
+            colorText(padText(s.username, 20), 'green') +
+            colorText(padText(`${s.score}`, 8), 'yellow', null, true) +
+            colorText(dateStr, 'white') +
+            '\r\n'
+          );
+        }
       }
 
-      // Header
-      this.connection.write(
-        colorText('  ' + padText('Rank', 6) + padText('Player', 20) + padText('Score', 8) + 'Date', 'white', null, true) + '\r\n'
-      );
+      // Show network scores if inter-BBS is configured
+      if (showNetwork) {
+        const netScores = getNetworkScores(gameName, 10);
+        this.connection.write('\r\n');
+        this.connection.write(colorText(`  ${gameName} - Network Top 10`, 'magenta', null, true) + '\r\n');
+        this.connection.write(colorText('  ' + BOX.HORIZONTAL.repeat(50), 'cyan') + '\r\n');
 
-      for (let i = 0; i < scores.length; i++) {
-        const s = scores[i];
-        const dateStr = s.played_at
-          ? new Date(s.played_at + 'Z').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-          : '';
-        const rankColor = i === 0 ? 'yellow' : i === 1 ? 'white' : i === 2 ? 'cyan' : 'white';
-        this.connection.write(
-          colorText('  ' + padText(`${i + 1}`, 6), rankColor, null, i < 3) +
-          colorText(padText(s.username, 20), 'green') +
-          colorText(padText(`${s.score}`, 8), 'yellow', null, true) +
-          colorText(dateStr, 'white') +
-          '\r\n'
-        );
+        if (netScores.length === 0) {
+          this.connection.write(colorText('  No network scores yet.', 'white') + '\r\n');
+        } else {
+          this.connection.write(
+            colorText('  ' + padText('Rank', 6) + padText('Player', 22) + padText('BBS', 16) + padText('Score', 8), 'white', null, true) + '\r\n'
+          );
+
+          for (let i = 0; i < netScores.length; i++) {
+            const s = netScores[i];
+            const rankColor = i === 0 ? 'yellow' : i === 1 ? 'white' : i === 2 ? 'cyan' : 'white';
+            this.connection.write(
+              colorText('  ' + padText(`${i + 1}`, 6), rankColor, null, i < 3) +
+              colorText(padText(s.username, 22), 'green') +
+              colorText(padText(s.origin_bbs, 16), 'magenta') +
+              colorText(padText(`${s.score}`, 8), 'yellow', null, true) +
+              '\r\n'
+            );
+          }
+        }
       }
     }
 
@@ -493,6 +522,9 @@ export class GameService {
       INSERT INTO game_scores (game_name, user_id, username, score, details)
       VALUES (?, ?, ?, ?, ?)
     `).run(gameName, this.user.id, this.user.username, score, details);
+
+    // Queue score for inter-BBS sync if networking is configured
+    queueScoreForSync(gameName, this.user.username, score);
   }
 
   /**

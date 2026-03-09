@@ -115,6 +115,13 @@ export function initializeDatabase() {
     db.exec('UPDATE forums SET sort_order = id WHERE sort_order = 0 OR sort_order IS NULL');
   }
 
+  // Add network_id column to messages for inter-BBS deduplication
+  const messageColumns = db.prepare("PRAGMA table_info(messages)").all().map(c => c.name);
+  if (!messageColumns.includes('network_id')) {
+    console.log('  - Adding network_id column to messages');
+    db.exec('ALTER TABLE messages ADD COLUMN network_id TEXT');
+  }
+
   console.log('Database initialization complete!');
   console.log('');
   console.log('Default sysop credentials:');

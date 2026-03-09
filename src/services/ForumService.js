@@ -6,6 +6,7 @@ import { colorText } from '../utils/ansi.js';
 import { wordWrap } from '../utils/text.js';
 import { loadMenu } from './menus/MenuLoader.js';
 import { AchievementService } from './AchievementService.js';
+import { queueMessageForSync } from './NetworkService.js';
 
 export class ForumService {
   constructor(connection) {
@@ -167,13 +168,19 @@ export class ForumService {
     if (!body) return;
 
     const db = getDatabase();
-    db.prepare(`
+    const result = db.prepare(`
       INSERT INTO messages (forum_id, user_id, username, subject, body)
       VALUES (?, ?, ?, ?, ?)
     `).run(forum.id, this.user.id, this.user.username, subject, body);
 
     // Update forum post count
     db.prepare('UPDATE forums SET post_count = post_count + 1 WHERE id = ?').run(forum.id);
+
+    // Queue for inter-BBS sync if this forum is networked
+    const newMsg = db.prepare('SELECT * FROM messages WHERE id = ?').get(result.lastInsertRowid);
+    if (newMsg) {
+      queueMessageForSync(forum.id, newMsg);
+    }
 
     // Update user post count
     this.user.incrementPosts();
@@ -219,13 +226,19 @@ export class ForumService {
     if (!body) return;
 
     const db = getDatabase();
-    db.prepare(`
+    const replyResult = db.prepare(`
       INSERT INTO messages (forum_id, user_id, username, subject, body, reply_to)
       VALUES (?, ?, ?, ?, ?, ?)
     `).run(forum.id, this.user.id, this.user.username, 'Re: ' + originalMessage.subject, body, originalMessage.id);
 
     // Update forum post count
     db.prepare('UPDATE forums SET post_count = post_count + 1 WHERE id = ?').run(forum.id);
+
+    // Queue for inter-BBS sync if this forum is networked
+    const replyMsg = db.prepare('SELECT * FROM messages WHERE id = ?').get(replyResult.lastInsertRowid);
+    if (replyMsg) {
+      queueMessageForSync(forum.id, replyMsg);
+    }
 
     // Update user post count
     this.user.incrementPosts();

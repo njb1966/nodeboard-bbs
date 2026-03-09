@@ -45,6 +45,7 @@ export const SCHEMA = {
       subject TEXT NOT NULL,
       body TEXT NOT NULL,
       reply_to INTEGER,
+      network_id TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (forum_id) REFERENCES forums(id) ON DELETE CASCADE,
@@ -251,6 +252,68 @@ export const SCHEMA = {
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )
   `,
+
+  // ─── Inter-BBS Networking ──────────────────────────────────────────────────
+
+  bbs_links: `
+    CREATE TABLE IF NOT EXISTS bbs_links (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      address TEXT NOT NULL,
+      port INTEGER DEFAULT 3000,
+      api_key TEXT NOT NULL,
+      last_sync DATETIME,
+      enabled INTEGER DEFAULT 1,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `,
+
+  networked_forums: `
+    CREATE TABLE IF NOT EXISTS networked_forums (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      forum_id INTEGER NOT NULL,
+      network_tag TEXT NOT NULL,
+      FOREIGN KEY (forum_id) REFERENCES forums(id) ON DELETE CASCADE,
+      UNIQUE(forum_id, network_tag)
+    )
+  `,
+
+  sync_queue: `
+    CREATE TABLE IF NOT EXISTS sync_queue (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      target_link_id INTEGER NOT NULL,
+      message_data TEXT NOT NULL,
+      status TEXT DEFAULT 'pending',
+      attempts INTEGER DEFAULT 0,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (target_link_id) REFERENCES bbs_links(id) ON DELETE CASCADE
+    )
+  `,
+
+  network_game_scores: `
+    CREATE TABLE IF NOT EXISTS network_game_scores (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      game_name TEXT NOT NULL,
+      username TEXT NOT NULL,
+      origin_bbs TEXT NOT NULL,
+      score INTEGER NOT NULL,
+      played_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `,
+
+  // ─── RSS Feeds ─────────────────────────────────────────────────────────────
+
+  rss_feeds: `
+    CREATE TABLE IF NOT EXISTS rss_feeds (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      url TEXT NOT NULL UNIQUE,
+      last_fetched DATETIME,
+      enabled INTEGER DEFAULT 1,
+      security_level INTEGER DEFAULT 10,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `,
 };
 
 export const INDEXES = [
@@ -271,6 +334,15 @@ export const INDEXES = [
   'CREATE INDEX IF NOT EXISTS idx_user_achievements_user ON user_achievements(user_id)',
   'CREATE INDEX IF NOT EXISTS idx_scheduled_events_enabled ON scheduled_events(enabled)',
   'CREATE INDEX IF NOT EXISTS idx_forums_sort_order ON forums(sort_order)',
+  // Inter-BBS networking
+  'CREATE INDEX IF NOT EXISTS idx_sync_queue_status ON sync_queue(status)',
+  'CREATE INDEX IF NOT EXISTS idx_sync_queue_target ON sync_queue(target_link_id)',
+  'CREATE INDEX IF NOT EXISTS idx_networked_forums_forum ON networked_forums(forum_id)',
+  'CREATE INDEX IF NOT EXISTS idx_networked_forums_tag ON networked_forums(network_tag)',
+  'CREATE INDEX IF NOT EXISTS idx_messages_network_id ON messages(network_id)',
+  'CREATE INDEX IF NOT EXISTS idx_network_game_scores_game ON network_game_scores(game_name, score DESC)',
+  // RSS feeds
+  'CREATE INDEX IF NOT EXISTS idx_rss_feeds_enabled ON rss_feeds(enabled)',
 ];
 
 export const DEFAULT_DATA = {

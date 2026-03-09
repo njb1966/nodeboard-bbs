@@ -11,6 +11,7 @@ import { banIP, unbanIP, getBannedIPs } from './RateLimiter.js';
 import { logEvent, queryLogs } from './LogService.js';
 import { getAvailableCommands } from './EventScheduler.js';
 import { listThemes, loadTheme, getActiveTheme, setActiveTheme } from './ThemeService.js';
+import { getSyncQueueStats, processSyncQueue } from './NetworkService.js';
 import config from '../config/index.js';
 import { writeFileSync, existsSync, mkdirSync } from 'fs';
 import { join } from 'path';
@@ -40,6 +41,8 @@ export class SysopService {
         { key: 'S', text: 'System Statistics' },
         { key: 'E', text: 'Event Scheduler' },
         { key: 'T', text: 'Theme Management' },
+        { key: 'N', text: 'Inter-BBS Network' },
+        { key: 'R', text: 'RSS Feed Management' },
         { key: 'Q', text: 'Return to Main Menu' },
       ];
 
@@ -58,6 +61,8 @@ export class SysopService {
         case 'S': await this.systemStatistics(); break;
         case 'E': await this.eventScheduler(); break;
         case 'T': await this.themeManagement(); break;
+        case 'N': await this.networkManagement(); break;
+        case 'R': await this.rssFeedManagement(); break;
         case 'Q': return;
       }
     }
@@ -1355,6 +1360,414 @@ export class SysopService {
           this.screen.messageBox('Error', 'Failed to load theme.', 'error');
         }
         await this.connection.getChar();
+      }
+    }
+  }
+
+  // ═══════════════════════════════════════════════════════════════════
+  //  INTER-BBS NETWORK MANAGEMENT
+  // ═══════════════════════════════════════════════════════════════════
+
+  async networkManagement() {
+    while (true) {
+      this.screen.clear();
+      this.connection.write('\r\n');
+      this.connection.write(colorText('INTER-BBS NETWORK', 'yellow', null, true) + '\r\n');
+      this.connection.write(colorText('='.repeat(80), 'cyan', null, true) + '\r\n\r\n');
+
+      const menuItems = [
+        { key: '1', text: 'Linked BBSes' },
+        { key: '2', text: 'Networked Forums' },
+        { key: '3', text: 'Sync Queue Status' },
+        { key: '4', text: 'Force Sync Now' },
+        { key: 'Q', text: 'Return' },
+      ];
+
+      for (const item of menuItems) {
+        this.connection.write(
+          colorText(`  [${item.key}] `, 'cyan', null, true) +
+          colorText(item.text, 'white') + '\r\n'
+        );
+      }
+
+      this.connection.write('\r\n');
+      const choice = (await this.connection.getInput('  Command: ')).toUpperCase();
+
+      switch (choice) {
+        case '1': await this.linkedBBSes(); break;
+        case '2': await this.networkedForums(); break;
+        case '3': await this.syncQueueStatus(); break;
+        case '4': await this.forceSync(); break;
+        case 'Q': return;
+      }
+    }
+  }
+
+  async linkedBBSes() {
+    while (true) {
+      const db = getDatabase();
+      const links = db.prepare('SELECT * FROM bbs_links ORDER BY name').all();
+
+      this.screen.clear();
+      this.connection.write('\r\n');
+      this.connection.write(colorText('LINKED BBSes', 'yellow', null, true) + '\r\n');
+      this.connection.write(colorText('='.repeat(80), 'cyan', null, true) + '\r\n\r\n');
+
+      if (links.length === 0) {
+        this.connection.write(colorText('  No linked BBSes configured.\r\n', 'white'));
+      } else {
+        for (const link of links) {
+          const status = link.enabled ? colorText('[ON] ', 'green') : colorText('[OFF]', 'red');
+          const lastSync = link.last_sync ? new Date(link.last_sync).toLocaleString() : 'Never';
+          this.connection.write(
+            colorText(`  [${link.id}] `, 'cyan', null, true) +
+            status + ' ' +
+            colorText(padText(link.name, 25), 'white', null, true) +
+            colorText(`${link.address}:${link.port}`, 'cyan') +
+            '\r\n' +
+            colorText('       ', 'white') +
+            colorText(`Last sync: ${lastSync}`, 'white') +
+            '\r\n'
+          );
+        }
+      }
+
+      this.connection.write('\r\n');
+      this.connection.write(colorText('[A]dd  [E]dit  [D]elete  [Q]uit: ', 'yellow', null, true));
+      const choice = (await this.connection.getInput()).toUpperCase();
+
+      switch (choice) {
+        case 'A': {
+          this.connection.write('\r\n');
+          const name = await this.connection.getInput('BBS Name: ');
+          if (!name) break;
+          this.connection.write('\r\n');
+          const address = await this.connection.getInput('Address (hostname or IP): ');
+          if (!address) break;
+          this.connection.write('\r\n');
+          const portStr = await this.connection.getInput('Port (default 3000): ');
+          const port = parseInt(portStr) || 3000;
+          this.connection.write('\r\n');
+          const apiKey = await this.connection.getInput('API Key: ');
+          if (!apiKey) break;
+          this.connection.write('\r\n');
+
+          db.prepare(
+            'INSERT INTO bbs_links (name, address, port, api_key) VALUES (?, ?, ?, ?)'
+          ).run(name, address, port, apiKey);
+          logEvent('ADMIN', this.user.id, this.user.username, `Added linked BBS: ${name}`, this.connection.remoteAddress);
+          this.screen.messageBox('Success', 'BBS link added.', 'success');
+          await this.connection.getChar();
+          break;
+        }
+        case 'E': {
+          const idStr = await this.connection.getInput('\r\nLink ID to edit: ');
+          this.connection.write('\r\n');
+          const id = parseInt(idStr);
+          const link = links.find(l => l.id === id);
+          if (!link) { this.screen.messageBox('Error', 'Not found.', 'error'); await this.connection.getChar(); break; }
+
+          this.connection.write(colorText('Leave blank to keep current value.\r\n', 'white'));
+          const name = await this.connection.getInput(`Name [${link.name}]: `);
+          this.connection.write('\r\n');
+          const address = await this.connection.getInput(`Address [${link.address}]: `);
+          this.connection.write('\r\n');
+          const portStr = await this.connection.getInput(`Port [${link.port}]: `);
+          this.connection.write('\r\n');
+          const apiKey = await this.connection.getInput(`API Key [${link.api_key}]: `);
+          this.connection.write('\r\n');
+          const enabledStr = await this.connection.getInput(`Enabled (Y/N) [${link.enabled ? 'Y' : 'N'}]: `);
+          this.connection.write('\r\n');
+
+          let enabled = link.enabled;
+          if (enabledStr.toUpperCase() === 'Y') enabled = 1;
+          else if (enabledStr.toUpperCase() === 'N') enabled = 0;
+
+          db.prepare(
+            'UPDATE bbs_links SET name = ?, address = ?, port = ?, api_key = ?, enabled = ? WHERE id = ?'
+          ).run(name || link.name, address || link.address, parseInt(portStr) || link.port, apiKey || link.api_key, enabled, link.id);
+          logEvent('ADMIN', this.user.id, this.user.username, `Edited linked BBS: ${name || link.name}`, this.connection.remoteAddress);
+          this.screen.messageBox('Success', 'BBS link updated.', 'success');
+          await this.connection.getChar();
+          break;
+        }
+        case 'D': {
+          const idStr = await this.connection.getInput('\r\nLink ID to delete: ');
+          this.connection.write('\r\n');
+          const id = parseInt(idStr);
+          const link = links.find(l => l.id === id);
+          if (!link) break;
+
+          this.connection.write(colorText(`Delete link to "${link.name}"? (Y/N): `, 'yellow', null, true));
+          const confirm = (await this.connection.getInput()).toUpperCase();
+          this.connection.write('\r\n');
+          if (confirm !== 'Y') break;
+
+          db.prepare('DELETE FROM bbs_links WHERE id = ?').run(link.id);
+          logEvent('ADMIN', this.user.id, this.user.username, `Deleted linked BBS: ${link.name}`, this.connection.remoteAddress);
+          this.screen.messageBox('Success', 'BBS link deleted.', 'success');
+          await this.connection.getChar();
+          break;
+        }
+        case 'Q': return;
+      }
+    }
+  }
+
+  async networkedForums() {
+    while (true) {
+      const db = getDatabase();
+      const netForums = db.prepare(`
+        SELECT nf.*, f.name as forum_name
+        FROM networked_forums nf
+        JOIN forums f ON nf.forum_id = f.id
+        ORDER BY f.name
+      `).all();
+
+      const allForums = db.prepare('SELECT id, name FROM forums ORDER BY name').all();
+
+      this.screen.clear();
+      this.connection.write('\r\n');
+      this.connection.write(colorText('NETWORKED FORUMS', 'yellow', null, true) + '\r\n');
+      this.connection.write(colorText('='.repeat(80), 'cyan', null, true) + '\r\n\r\n');
+
+      if (netForums.length === 0) {
+        this.connection.write(colorText('  No forums are networked.\r\n', 'white'));
+      } else {
+        for (const nf of netForums) {
+          this.connection.write(
+            colorText(`  [${nf.id}] `, 'cyan', null, true) +
+            colorText(padText(nf.forum_name, 30), 'white', null, true) +
+            colorText(`Tag: ${nf.network_tag}`, 'green') +
+            '\r\n'
+          );
+        }
+      }
+
+      this.connection.write('\r\n');
+      this.connection.write(colorText('[A]dd  [D]elete  [Q]uit: ', 'yellow', null, true));
+      const choice = (await this.connection.getInput()).toUpperCase();
+
+      switch (choice) {
+        case 'A': {
+          this.connection.write('\r\n');
+          this.connection.write(colorText('Available forums:\r\n', 'white'));
+          allForums.forEach((f, i) => {
+            this.connection.write(colorText(`  ${i + 1}. ${f.name}\r\n`, 'cyan'));
+          });
+
+          const forumChoice = await this.connection.getInput('Select forum number: ');
+          this.connection.write('\r\n');
+          const forumIdx = parseInt(forumChoice) - 1;
+          if (forumIdx < 0 || forumIdx >= allForums.length) break;
+
+          const networkTag = await this.connection.getInput('Network tag (e.g. "general"): ');
+          this.connection.write('\r\n');
+          if (!networkTag) break;
+
+          try {
+            db.prepare(
+              'INSERT INTO networked_forums (forum_id, network_tag) VALUES (?, ?)'
+            ).run(allForums[forumIdx].id, networkTag);
+            logEvent('ADMIN', this.user.id, this.user.username, `Networked forum "${allForums[forumIdx].name}" with tag "${networkTag}"`, this.connection.remoteAddress);
+            this.screen.messageBox('Success', 'Forum networked.', 'success');
+          } catch (err) {
+            this.screen.messageBox('Error', 'Forum already has that network tag.', 'error');
+          }
+          await this.connection.getChar();
+          break;
+        }
+        case 'D': {
+          const idStr = await this.connection.getInput('\r\nNetworked forum ID to remove: ');
+          this.connection.write('\r\n');
+          const id = parseInt(idStr);
+          const nf = netForums.find(n => n.id === id);
+          if (!nf) break;
+
+          db.prepare('DELETE FROM networked_forums WHERE id = ?').run(nf.id);
+          logEvent('ADMIN', this.user.id, this.user.username, `Removed network tag "${nf.network_tag}" from forum "${nf.forum_name}"`, this.connection.remoteAddress);
+          this.screen.messageBox('Success', 'Network mapping removed.', 'success');
+          await this.connection.getChar();
+          break;
+        }
+        case 'Q': return;
+      }
+    }
+  }
+
+  async syncQueueStatus() {
+    const stats = getSyncQueueStats();
+    const db = getDatabase();
+    const recentFailed = db.prepare(`
+      SELECT sq.*, bl.name as link_name
+      FROM sync_queue sq
+      JOIN bbs_links bl ON sq.target_link_id = bl.id
+      WHERE sq.status = 'failed'
+      ORDER BY sq.created_at DESC
+      LIMIT 10
+    `).all();
+
+    this.screen.clear();
+    this.connection.write('\r\n');
+    this.connection.write(colorText('SYNC QUEUE STATUS', 'yellow', null, true) + '\r\n');
+    this.connection.write(colorText('='.repeat(80), 'cyan', null, true) + '\r\n\r\n');
+
+    this.connection.write(
+      colorText('  Pending:  ', 'white', null, true) + colorText(String(stats.pending), 'yellow', null, true) + '\r\n' +
+      colorText('  Sent:     ', 'white', null, true) + colorText(String(stats.sent), 'green', null, true) + '\r\n' +
+      colorText('  Failed:   ', 'white', null, true) + colorText(String(stats.failed), 'red', null, true) + '\r\n'
+    );
+
+    if (recentFailed.length > 0) {
+      this.connection.write('\r\n');
+      this.connection.write(colorText('  Recent failures:', 'red', null, true) + '\r\n');
+      for (const item of recentFailed) {
+        this.connection.write(
+          colorText(`    -> ${item.link_name}  Attempts: ${item.attempts}  ${item.created_at}`, 'white') + '\r\n'
+        );
+      }
+    }
+
+    this.connection.write('\r\n');
+    this.connection.write(colorText('  [C]lear sent items  [Q]uit: ', 'yellow', null, true));
+    const choice = (await this.connection.getInput()).toUpperCase();
+
+    if (choice === 'C') {
+      db.prepare("DELETE FROM sync_queue WHERE status = 'sent'").run();
+      this.screen.messageBox('Success', 'Sent items cleared.', 'success');
+      await this.connection.getChar();
+    }
+  }
+
+  async forceSync() {
+    this.connection.write('\r\n');
+    this.connection.write(colorText('  Processing sync queue...', 'cyan') + '\r\n');
+
+    try {
+      const result = await processSyncQueue();
+      this.connection.write(colorText(`  ${result}`, 'green') + '\r\n');
+    } catch (err) {
+      this.connection.write(colorText(`  Error: ${err.message}`, 'red') + '\r\n');
+    }
+
+    this.connection.write('\r\n');
+    this.connection.write(colorText('  Press any key to continue...', 'white'));
+    await this.connection.getChar();
+  }
+
+  // ═══════════════════════════════════════════════════════════════════
+  //  RSS FEED MANAGEMENT
+  // ═══════════════════════════════════════════════════════════════════
+
+  async rssFeedManagement() {
+    while (true) {
+      const db = getDatabase();
+      const feeds = db.prepare('SELECT * FROM rss_feeds ORDER BY name').all();
+
+      this.screen.clear();
+      this.connection.write('\r\n');
+      this.connection.write(colorText('RSS FEED MANAGEMENT', 'yellow', null, true) + '\r\n');
+      this.connection.write(colorText('='.repeat(80), 'cyan', null, true) + '\r\n\r\n');
+
+      if (feeds.length === 0) {
+        this.connection.write(colorText('  No RSS feeds configured.\r\n', 'white'));
+      } else {
+        for (const feed of feeds) {
+          const status = feed.enabled ? colorText('[ON] ', 'green') : colorText('[OFF]', 'red');
+          const lastFetched = feed.last_fetched ? new Date(feed.last_fetched).toLocaleString() : 'Never';
+          this.connection.write(
+            colorText(`  [${feed.id}] `, 'cyan', null, true) +
+            status + ' ' +
+            colorText(padText(feed.name, 25), 'white', null, true) +
+            colorText(`Level: ${feed.security_level}`, 'yellow') +
+            '\r\n' +
+            colorText('       ', 'white') +
+            colorText(feed.url, 'cyan') +
+            '\r\n' +
+            colorText('       ', 'white') +
+            colorText(`Last fetched: ${lastFetched}`, 'white') +
+            '\r\n'
+          );
+        }
+      }
+
+      this.connection.write('\r\n');
+      this.connection.write(colorText('[A]dd  [E]dit  [D]elete  [Q]uit: ', 'yellow', null, true));
+      const choice = (await this.connection.getInput()).toUpperCase();
+
+      switch (choice) {
+        case 'A': {
+          this.connection.write('\r\n');
+          const name = await this.connection.getInput('Feed name: ');
+          if (!name) break;
+          this.connection.write('\r\n');
+          const url = await this.connection.getInput('Feed URL: ');
+          if (!url) break;
+          this.connection.write('\r\n');
+          const levelStr = await this.connection.getInput('Security level (default 10): ');
+          const level = parseInt(levelStr) || 10;
+          this.connection.write('\r\n');
+
+          try {
+            db.prepare(
+              'INSERT INTO rss_feeds (name, url, security_level) VALUES (?, ?, ?)'
+            ).run(name, url, level);
+            logEvent('ADMIN', this.user.id, this.user.username, `Added RSS feed: ${name}`, this.connection.remoteAddress);
+            this.screen.messageBox('Success', 'RSS feed added.', 'success');
+          } catch (err) {
+            this.screen.messageBox('Error', 'Feed URL already exists.', 'error');
+          }
+          await this.connection.getChar();
+          break;
+        }
+        case 'E': {
+          const idStr = await this.connection.getInput('\r\nFeed ID to edit: ');
+          this.connection.write('\r\n');
+          const id = parseInt(idStr);
+          const feed = feeds.find(f => f.id === id);
+          if (!feed) { this.screen.messageBox('Error', 'Not found.', 'error'); await this.connection.getChar(); break; }
+
+          this.connection.write(colorText('Leave blank to keep current value.\r\n', 'white'));
+          const name = await this.connection.getInput(`Name [${feed.name}]: `);
+          this.connection.write('\r\n');
+          const url = await this.connection.getInput(`URL [${feed.url}]: `);
+          this.connection.write('\r\n');
+          const levelStr = await this.connection.getInput(`Security level [${feed.security_level}]: `);
+          this.connection.write('\r\n');
+          const enabledStr = await this.connection.getInput(`Enabled (Y/N) [${feed.enabled ? 'Y' : 'N'}]: `);
+          this.connection.write('\r\n');
+
+          let enabled = feed.enabled;
+          if (enabledStr.toUpperCase() === 'Y') enabled = 1;
+          else if (enabledStr.toUpperCase() === 'N') enabled = 0;
+
+          db.prepare(
+            'UPDATE rss_feeds SET name = ?, url = ?, security_level = ?, enabled = ? WHERE id = ?'
+          ).run(name || feed.name, url || feed.url, parseInt(levelStr) || feed.security_level, enabled, feed.id);
+          logEvent('ADMIN', this.user.id, this.user.username, `Edited RSS feed: ${name || feed.name}`, this.connection.remoteAddress);
+          this.screen.messageBox('Success', 'RSS feed updated.', 'success');
+          await this.connection.getChar();
+          break;
+        }
+        case 'D': {
+          const idStr = await this.connection.getInput('\r\nFeed ID to delete: ');
+          this.connection.write('\r\n');
+          const id = parseInt(idStr);
+          const feed = feeds.find(f => f.id === id);
+          if (!feed) break;
+
+          this.connection.write(colorText(`Delete feed "${feed.name}"? (Y/N): `, 'yellow', null, true));
+          const confirm = (await this.connection.getInput()).toUpperCase();
+          this.connection.write('\r\n');
+          if (confirm !== 'Y') break;
+
+          db.prepare('DELETE FROM rss_feeds WHERE id = ?').run(feed.id);
+          logEvent('ADMIN', this.user.id, this.user.username, `Deleted RSS feed: ${feed.name}`, this.connection.remoteAddress);
+          this.screen.messageBox('Success', 'RSS feed deleted.', 'success');
+          await this.connection.getChar();
+          break;
+        }
+        case 'Q': return;
       }
     }
   }

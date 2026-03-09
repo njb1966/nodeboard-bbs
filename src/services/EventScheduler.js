@@ -8,6 +8,7 @@ import getDatabase from '../database/db.js';
 import { Session } from '../models/Session.js';
 import { logEvent } from './LogService.js';
 import config from '../config/index.js';
+import { processSyncQueue } from './NetworkService.js';
 import { existsSync, copyFileSync, mkdirSync } from 'fs';
 import { join, dirname } from 'path';
 
@@ -44,6 +45,10 @@ const COMMANDS = {
     const msg = `Stats snapshot — Users: ${users}, Posts: ${posts}, Active sessions: ${sessions}`;
     logEvent('SYSTEM', null, null, msg);
     return msg;
+  },
+
+  network_sync: async () => {
+    return await processSyncQueue();
   },
 
   backup_db: async () => {

@@ -10,6 +10,7 @@ import config from '../config/index.js';
 import { TelnetConnection } from '../telnet/connection.js';
 import { getConnections } from '../telnet/server.js';
 import { redeemDownloadToken } from '../services/DownloadTokenService.js';
+import { receiveMessage, processSyncQueue } from '../services/NetworkService.js';
 import { fileURLToPath } from 'url';
 import { dirname, join, basename } from 'path';
 
@@ -236,6 +237,48 @@ export class WebServer {
         telnetPort: config.bbs.port,
         sysop: config.bbs.sysop,
       });
+    });
+
+    // ─── Inter-BBS Sync Endpoints ──────────────────────────────────────────
+
+    // Receive messages from linked BBSes
+    this.app.post('/api/sync/receive', (req, res) => {
+      const apiKey = req.headers['x-api-key'];
+      if (!apiKey) {
+        return res.status(401).json({ error: 'Missing X-API-Key header' });
+      }
+
+      const result = receiveMessage(apiKey, req.body);
+      if (result.success) {
+        res.json({ success: true, message: result.message || 'Message received' });
+      } else {
+        res.status(400).json({ success: false, error: result.error });
+      }
+    });
+
+    // Push pending messages (trigger sync processing)
+    this.app.post('/api/sync/push', async (req, res) => {
+      const apiKey = req.headers['x-api-key'];
+      if (!apiKey) {
+        return res.status(401).json({ error: 'Missing X-API-Key header' });
+      }
+
+      // Simple API key validation — any valid linked BBS key works
+      const db = (await import('../database/db.js')).default();
+      const link = db.prepare(
+        'SELECT id FROM bbs_links WHERE api_key = ? AND enabled = 1'
+      ).get(apiKey);
+
+      if (!link) {
+        return res.status(401).json({ error: 'Invalid API key' });
+      }
+
+      try {
+        const result = await processSyncQueue();
+        res.json({ success: true, message: result });
+      } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+      }
     });
   }
 

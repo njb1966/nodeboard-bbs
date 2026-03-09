@@ -17,6 +17,7 @@ import { OneLinerService } from '../OneLinerService.js';
 import { PollService } from '../PollService.js';
 import { ChatService } from '../ChatService.js';
 import { GameService } from '../GameService.js';
+import { RSSService } from '../RSSService.js';
 
 export class MainMenu {
   constructor(connection) {
@@ -123,6 +124,13 @@ export class MainMenu {
       this.connection.setActivity('Playing Games');
       const gameService = new GameService(this.connection);
       await gameService.show();
+      this.connection.setActivity('Main Menu');
+    });
+
+    engine.registerAction('rss', async () => {
+      this.connection.setActivity('Reading RSS Feeds');
+      const rssService = new RSSService(this.connection);
+      await rssService.show();
       this.connection.setActivity('Main Menu');
     });
 

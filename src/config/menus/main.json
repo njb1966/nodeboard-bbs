@@ -18,6 +18,7 @@
     { "key": "O", "text": "OneLiners", "action": "oneliners" },
     { "key": "V", "text": "Voting Booth", "action": "polls" },
     { "key": "E", "text": "Built-in Games", "action": "games" },
+    { "key": "R", "text": "RSS Feeds", "action": "rss" },
     { "key": "G", "text": "Goodbye (Logoff)", "action": "goodbye" },
     { "key": "A", "text": "Sysop Admin", "action": "sysopAdmin", "minSecurity": 90 }
   ]
