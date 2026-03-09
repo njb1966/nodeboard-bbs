@@ -3,6 +3,7 @@
  */
 import getDatabase from '../database/db.js';
 import { colorText, BOX } from '../utils/ansi.js';
+import { AchievementService } from './AchievementService.js';
 
 export class PollService {
   constructor(connection) {
@@ -159,6 +160,12 @@ export class PollService {
             INSERT INTO poll_votes (poll_id, option_id, user_id)
             VALUES (?, ?, ?)
           `).run(pollId, options[optIdx].id, this.user.id);
+
+          // Check for voting achievement
+          const voteAch = AchievementService.awardSingle(this.user, 'first_vote');
+          if (voteAch) {
+            AchievementService.notifyUnlock(this.connection, voteAch);
+          }
 
           this.screen.messageBox('Success', 'Your vote has been recorded!', 'success');
           await this.connection.getChar();

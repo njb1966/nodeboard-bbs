@@ -5,6 +5,7 @@ import getDatabase from '../database/db.js';
 import { colorText } from '../utils/ansi.js';
 import { wordWrap } from '../utils/text.js';
 import { loadMenu } from './menus/MenuLoader.js';
+import { AchievementService } from './AchievementService.js';
 
 export class ForumService {
   constructor(connection) {
@@ -177,6 +178,12 @@ export class ForumService {
     // Update user post count
     this.user.incrementPosts();
 
+    // Check for post-related achievements
+    const newAch = AchievementService.checkAndAward(this.user);
+    if (newAch.length > 0) {
+      AchievementService.notifyUnlocks(this.connection, newAch);
+    }
+
     this.screen.messageBox('Success', 'Message posted successfully!', 'success');
     await this.connection.getChar();
   }
@@ -222,6 +229,12 @@ export class ForumService {
 
     // Update user post count
     this.user.incrementPosts();
+
+    // Check for post-related achievements
+    const replyAch = AchievementService.checkAndAward(this.user);
+    if (replyAch.length > 0) {
+      AchievementService.notifyUnlocks(this.connection, replyAch);
+    }
 
     this.screen.messageBox('Success', 'Reply posted successfully!', 'success');
     await this.connection.getChar();

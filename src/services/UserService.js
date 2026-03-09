@@ -9,6 +9,7 @@ import { BOX } from '../utils/ansi.js';
 import { wordWrap } from '../utils/text.js';
 import config from '../config/index.js';
 import { getConnections } from '../telnet/server.js';
+import { AchievementService } from './AchievementService.js';
 
 export class UserService {
   constructor(connection) {
@@ -159,6 +160,7 @@ export class UserService {
         { key: 'P', text: 'Change Password' },
         { key: 'E', text: 'Edit Profile' },
         { key: 'S', text: 'View Statistics' },
+        { key: 'A', text: 'View Achievements' },
         { key: 'Q', text: 'Return to Main Menu' },
       ];
 
@@ -177,6 +179,10 @@ export class UserService {
 
         case 'S':
           await this.viewStatistics();
+          break;
+
+        case 'A':
+          await AchievementService.showAchievements(this.connection);
           break;
 
         case 'Q':
@@ -281,6 +287,24 @@ export class UserService {
     this.connection.write(colorText('Uploads:         ', 'white', null, true) + colorText(this.user.uploads.toString(), 'cyan') + '\r\n');
     this.connection.write(colorText('Downloads:       ', 'white', null, true) + colorText(this.user.downloads.toString(), 'cyan') + '\r\n');
     this.connection.write(colorText('Unread Mail:     ', 'white', null, true) + colorText(this.user.getUnreadMessageCount().toString(), 'cyan') + '\r\n');
+
+    // Achievements summary
+    const badges = AchievementService.getProfileBadges(this.user.id);
+    this.connection.write('\r\n');
+    this.connection.write(colorText('ACHIEVEMENTS', 'yellow', null, true) + '\r\n');
+    this.connection.write(colorText('-'.repeat(40), 'cyan') + '\r\n');
+    if (badges.length === 0) {
+      this.connection.write(colorText('No achievements earned yet.', 'white') + '\r\n');
+    } else {
+      const badgeStrs = badges.map(b =>
+        colorText(`[${b.icon}]`, b.iconColor, null, true) + ' ' + colorText(b.name, 'white')
+      );
+      // Display badges in rows of 3
+      for (let i = 0; i < badgeStrs.length; i += 3) {
+        const row = badgeStrs.slice(i, i + 3).join('   ');
+        this.connection.write('  ' + row + '\r\n');
+      }
+    }
 
     this.connection.write('\r\n');
     this.connection.write(colorText('Press any key to continue...', 'white') + '\r\n');

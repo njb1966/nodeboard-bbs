@@ -3,6 +3,7 @@
  */
 import getDatabase from '../database/db.js';
 import { colorText, BOX, ANSI } from '../utils/ansi.js';
+import { AchievementService } from './AchievementService.js';
 
 export class OneLinerService {
   constructor(connection) {
@@ -88,6 +89,12 @@ export class OneLinerService {
       INSERT INTO oneliners (user_id, username, message)
       VALUES (?, ?, ?)
     `).run(this.user.id, this.user.username, trimmed);
+
+    // Check for oneliner achievement
+    const ach = AchievementService.awardSingle(this.user, 'first_oneliner');
+    if (ach) {
+      AchievementService.notifyUnlock(this.connection, ach);
+    }
   }
 }
 

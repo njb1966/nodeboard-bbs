@@ -16,6 +16,7 @@ import { SysopService } from '../SysopService.js';
 import { OneLinerService } from '../OneLinerService.js';
 import { PollService } from '../PollService.js';
 import { ChatService } from '../ChatService.js';
+import { GameService } from '../GameService.js';
 
 export class MainMenu {
   constructor(connection) {
@@ -115,6 +116,13 @@ export class MainMenu {
       this.connection.setActivity('Voting Booth');
       const service = new PollService(this.connection);
       await service.show();
+      this.connection.setActivity('Main Menu');
+    });
+
+    engine.registerAction('games', async () => {
+      this.connection.setActivity('Playing Games');
+      const gameService = new GameService(this.connection);
+      await gameService.show();
       this.connection.setActivity('Main Menu');
     });
 

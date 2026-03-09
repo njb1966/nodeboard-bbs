@@ -19,7 +19,8 @@ export const SCHEMA = {
       uploads INTEGER DEFAULT 0,
       downloads INTEGER DEFAULT 0,
       posts INTEGER DEFAULT 0,
-      status TEXT DEFAULT 'active'
+      status TEXT DEFAULT 'active',
+      door_time_bank INTEGER DEFAULT 60
     )
   `,
 
@@ -210,6 +211,30 @@ export const SCHEMA = {
       banned_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )
   `,
+
+  game_scores: `
+    CREATE TABLE IF NOT EXISTS game_scores (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      game_name TEXT NOT NULL,
+      user_id INTEGER NOT NULL,
+      username TEXT NOT NULL,
+      score INTEGER NOT NULL,
+      details TEXT,
+      played_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    )
+  `,
+
+  user_achievements: `
+    CREATE TABLE IF NOT EXISTS user_achievements (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      achievement_id TEXT NOT NULL,
+      earned_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+      UNIQUE(user_id, achievement_id)
+    )
+  `,
 };
 
 export const INDEXES = [
@@ -225,6 +250,9 @@ export const INDEXES = [
   'CREATE INDEX IF NOT EXISTS idx_poll_options_poll ON poll_options(poll_id)',
   'CREATE INDEX IF NOT EXISTS idx_poll_votes_poll_user ON poll_votes(poll_id, user_id)',
   'CREATE INDEX IF NOT EXISTS idx_banned_ips_address ON banned_ips(ip_address)',
+  'CREATE INDEX IF NOT EXISTS idx_game_scores_game_score ON game_scores(game_name, score DESC)',
+  'CREATE INDEX IF NOT EXISTS idx_game_scores_user ON game_scores(user_id)',
+  'CREATE INDEX IF NOT EXISTS idx_user_achievements_user ON user_achievements(user_id)',
 ];
 
 export const DEFAULT_DATA = {

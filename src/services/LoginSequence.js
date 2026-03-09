@@ -24,6 +24,7 @@ export class LoginSequence {
     await this.showWelcomeArt();
     this.screen.clear();
     this.showSystemStats();
+    this.showTopCallers();
     this.showLastCallers();
     this.showMailNotification();
     this.showNewBulletins();
@@ -113,6 +114,65 @@ export class LoginSequence {
     }
 
     this.conn.write(border + '  ' + BOX.D_BOTTOM_LEFT + BOX.D_HORIZONTAL.repeat(w - 2) + BOX.D_BOTTOM_RIGHT + reset + '\r\n');
+  }
+
+  /**
+   * Display Top 10 Callers and Top 10 Posters.
+   */
+  showTopCallers() {
+    const db = getDatabase();
+
+    // Top 10 callers
+    const topCallers = db.prepare(`
+      SELECT username, login_count
+      FROM users
+      WHERE status = 'active' AND login_count > 0
+      ORDER BY login_count DESC
+      LIMIT 10
+    `).all();
+
+    if (topCallers.length > 0) {
+      this.conn.write('\r\n');
+      this.conn.write(colorText('  Top 10 Callers', 'yellow', null, true) + '\r\n');
+      this.conn.write(colorText('  ' + BOX.HORIZONTAL.repeat(40), 'cyan') + '\r\n');
+
+      for (let i = 0; i < topCallers.length; i++) {
+        const c = topCallers[i];
+        const rank = padText(`${i + 1}.`, 4);
+        this.conn.write(
+          colorText(`  ${rank}`, 'white', null, true) +
+          colorText(padText(c.username, 20), 'green', null, true) +
+          colorText(`${c.login_count} calls`, 'white') +
+          '\r\n'
+        );
+      }
+    }
+
+    // Top 10 posters
+    const topPosters = db.prepare(`
+      SELECT username, posts
+      FROM users
+      WHERE status = 'active' AND posts > 0
+      ORDER BY posts DESC
+      LIMIT 10
+    `).all();
+
+    if (topPosters.length > 0) {
+      this.conn.write('\r\n');
+      this.conn.write(colorText('  Top 10 Posters', 'yellow', null, true) + '\r\n');
+      this.conn.write(colorText('  ' + BOX.HORIZONTAL.repeat(40), 'cyan') + '\r\n');
+
+      for (let i = 0; i < topPosters.length; i++) {
+        const p = topPosters[i];
+        const rank = padText(`${i + 1}.`, 4);
+        this.conn.write(
+          colorText(`  ${rank}`, 'white', null, true) +
+          colorText(padText(p.username, 20), 'green', null, true) +
+          colorText(`${p.posts} posts`, 'white') +
+          '\r\n'
+        );
+      }
+    }
   }
 
   /**

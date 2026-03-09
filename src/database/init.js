@@ -98,6 +98,14 @@ export function initializeDatabase() {
     }
   }
 
+  // ── Schema migrations for existing databases ──────────────────────────────
+  // Add door_time_bank column to users if it doesn't exist
+  const userColumns = db.prepare("PRAGMA table_info(users)").all().map(c => c.name);
+  if (!userColumns.includes('door_time_bank')) {
+    console.log('  - Adding door_time_bank column to users');
+    db.exec('ALTER TABLE users ADD COLUMN door_time_bank INTEGER DEFAULT 60');
+  }
+
   console.log('Database initialization complete!');
   console.log('');
   console.log('Default sysop credentials:');

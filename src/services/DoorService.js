@@ -1,11 +1,14 @@
 /**
  * DOOR Game Service
+ *
+ * Manages external door games with proper DOOR32.SYS drop file generation
+ * and per-user time bank tracking.
  */
 import getDatabase from '../database/db.js';
 import { colorText } from '../utils/ansi.js';
 import config from '../config/index.js';
 import { spawn } from 'child_process';
-import { existsSync } from 'fs';
+import { existsSync, writeFileSync, mkdirSync } from 'fs';
 import { join } from 'path';
 
 export class DoorService {
@@ -56,9 +59,36 @@ export class DoorService {
   }
 
   /**
+   * Get the user's remaining door time bank (in minutes).
+   */
+  getTimeBank() {
+    const db = getDatabase();
+    const row = db.prepare('SELECT door_time_bank FROM users WHERE id = ?').get(this.user.id);
+    return row ? row.door_time_bank : 0;
+  }
+
+  /**
+   * Deduct time from the user's door time bank.
+   * @param {number} minutes - Minutes to deduct
+   */
+  deductTime(minutes) {
+    const db = getDatabase();
+    db.prepare('UPDATE users SET door_time_bank = MAX(0, door_time_bank - ?) WHERE id = ?')
+      .run(minutes, this.user.id);
+  }
+
+  /**
    * Run a door game
    */
   async runDoor(door) {
+    // Check time bank
+    const timeRemaining = this.getTimeBank();
+    if (timeRemaining <= 0) {
+      this.screen.messageBox('Error', 'You have no time remaining in your door game time bank.', 'error');
+      await this.connection.getChar();
+      return;
+    }
+
     // Show door description
     this.screen.clear();
     this.connection.write('\r\n');
@@ -69,6 +99,7 @@ export class DoorService {
       this.connection.write(door.description + '\r\n\r\n');
     }
 
+    this.connection.write(colorText(`Time remaining: ${timeRemaining} minutes`, 'cyan', null, true) + '\r\n');
     this.connection.write(colorText('Starting game...', 'green', null, true) + '\r\n\r\n');
 
     // Check if command exists
@@ -81,17 +112,29 @@ export class DoorService {
       return;
     }
 
+    const startTime = Date.now();
+
     try {
-      await this.executeDoor(door);
+      await this.executeDoor(door, timeRemaining);
+
+      // Calculate time used and deduct
+      const minutesUsed = Math.ceil((Date.now() - startTime) / 60000);
+      this.deductTime(minutesUsed);
 
       // Update play count
       const db = getDatabase();
       db.prepare('UPDATE doors SET times_played = times_played + 1 WHERE id = ?').run(door.id);
 
       this.connection.write('\r\n\r\n');
-      this.connection.write(colorText('Game ended. Press any key to continue...', 'yellow', null, true) + '\r\n');
+      this.connection.write(colorText(`Game ended. Used ${minutesUsed} minute${minutesUsed !== 1 ? 's' : ''}.`, 'cyan') + '\r\n');
+      this.connection.write(colorText('Press any key to continue...', 'yellow', null, true) + '\r\n');
       await this.connection.getChar();
     } catch (error) {
+      // Still deduct time even on error
+      const minutesUsed = Math.ceil((Date.now() - startTime) / 60000);
+      if (minutesUsed > 0) {
+        this.deductTime(minutesUsed);
+      }
       this.screen.messageBox('Error', `Failed to run door: ${error.message}`, 'error');
       await this.connection.getChar();
     }
@@ -100,10 +143,10 @@ export class DoorService {
   /**
    * Execute door game process
    */
-  async executeDoor(door) {
+  async executeDoor(door, timeMinutes) {
     return new Promise((resolve, reject) => {
-      // Create drop file for door (DOOR32.SYS format)
-      const dropFile = this.createDropFile(door);
+      // Create DOOR32.SYS drop file
+      const dropFilePath = this.createDropFile(door, timeMinutes);
 
       // Spawn door process
       const doorPath = door.working_dir || config.paths.doors;
@@ -117,6 +160,7 @@ export class DoorService {
           ...process.env,
           BBSUSER: this.user.username,
           BBSUID: this.user.id.toString(),
+          DROPFILE: dropFilePath,
         },
       });
 
@@ -154,20 +198,51 @@ export class DoorService {
   }
 
   /**
-   * Create drop file for door (basic implementation)
+   * Create DOOR32.SYS drop file.
+   *
+   * Format (one value per line):
+   *   0            Comm type: 0 = local
+   *   0            Comm handle (socket handle)
+   *   38400        Baud rate
+   *   BBS Name     BBS software name
+   *   1            User record number (user ID)
+   *   Real Name    User's real name
+   *   Username     User's alias / handle
+   *   99           Security level
+   *   30           Time remaining in minutes
+   *   1            ANSI emulation: 1 = yes
+   *   1            Node number
+   *
+   * @returns {string} Path to the generated drop file
    */
-  createDropFile(door) {
-    // This is a simplified drop file format
-    // Real implementation would create DOOR32.SYS, DORINFO1.DEF, etc.
-    const dropContent = {
-      user: this.user.username,
-      userId: this.user.id,
-      securityLevel: this.user.security_level,
-      timeOnline: Math.floor(this.connection.session.getDuration() / 60),
-      bbsName: config.bbs.name,
-    };
+  createDropFile(door, timeMinutes) {
+    const doorPath = door.working_dir || config.paths.doors;
+    const dropDir = join(doorPath, 'temp');
+    if (!existsSync(dropDir)) {
+      mkdirSync(dropDir, { recursive: true });
+    }
 
-    return dropContent;
+    const nodeNumber = this.connection.nodeNumber || 1;
+    const realName = this.user.real_name || this.user.username;
+
+    const lines = [
+      '0',                          // Comm type: 0 = local
+      '0',                          // Comm handle
+      '38400',                      // Baud rate
+      config.bbs.name,              // BBS name
+      String(this.user.id),         // User record number
+      realName,                     // User's real name
+      this.user.username,           // User's alias
+      String(this.user.security_level), // Security level
+      String(timeMinutes),          // Time remaining in minutes
+      '1',                          // ANSI emulation: 1 = yes
+      String(nodeNumber),           // Node number
+    ];
+
+    const dropFilePath = join(dropDir, `DOOR32.SYS`);
+    writeFileSync(dropFilePath, lines.join('\r\n') + '\r\n');
+
+    return dropFilePath;
   }
 }
 

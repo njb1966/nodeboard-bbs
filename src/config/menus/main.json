@@ -17,6 +17,7 @@
     { "key": "S", "text": "User Settings", "action": "settings" },
     { "key": "O", "text": "OneLiners", "action": "oneliners" },
     { "key": "V", "text": "Voting Booth", "action": "polls" },
+    { "key": "E", "text": "Built-in Games", "action": "games" },
     { "key": "G", "text": "Goodbye (Logoff)", "action": "goodbye" },
     { "key": "A", "text": "Sysop Admin", "action": "sysopAdmin", "minSecurity": 90 }
   ]

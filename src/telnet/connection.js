@@ -9,6 +9,7 @@ import { MainMenu } from '../services/menus/MainMenu.js';
 import { LoginSequence } from '../services/LoginSequence.js';
 import { removeFromAllRooms } from '../services/ChatRoomManager.js';
 import { isLocked, isBanned, getRemainingLockout, recordFailedLogin, recordSuccessfulLogin } from '../services/RateLimiter.js';
+import { AchievementService } from '../services/AchievementService.js';
 import config from '../config/index.js';
 
 export class TelnetConnection {
@@ -78,6 +79,13 @@ export class TelnetConnection {
       this.screen.welcomeScreen(config.bbs.name, config.bbs.version);
       this.screen.messageBox('Welcome', `Welcome back, ${this.user.username}!`, 'success');
       await this.getChar();
+
+      // Check and award achievements on login
+      const sshAchievements = AchievementService.checkAndAward(this.user);
+      if (sshAchievements.length > 0) {
+        AchievementService.notifyUnlocks(this, sshAchievements);
+        await this.getChar();
+      }
 
       this.setActivity('Main Menu');
 
@@ -281,6 +289,13 @@ export class TelnetConnection {
         this.screen.messageBox('Welcome', `Welcome back, ${user.username}!`, 'success');
         await this.getChar();
 
+        // Check and award achievements on login
+        const newAchievements = AchievementService.checkAndAward(user);
+        if (newAchievements.length > 0) {
+          AchievementService.notifyUnlocks(this, newAchievements);
+          await this.getChar();
+        }
+
         this.setActivity('Main Menu');
 
         // Run login sequence then enter main menu
@@ -359,6 +374,13 @@ export class TelnetConnection {
 
       this.screen.messageBox('Success', 'Your account has been created successfully!', 'success');
       await this.getChar();
+
+      // Check and award achievements on first login
+      const newUserAchievements = AchievementService.checkAndAward(this.user);
+      if (newUserAchievements.length > 0) {
+        AchievementService.notifyUnlocks(this, newUserAchievements);
+        await this.getChar();
+      }
 
       this.setActivity('Main Menu');
 
