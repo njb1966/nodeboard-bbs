@@ -208,49 +208,52 @@ export class BBSScreen {
     const titleClr  = tc ? color(tc.menuTitle.fg, null, tc.menuTitle.bright) : (ANSI.FG_YELLOW + ANSI.BRIGHT);
     const accentClr = ANSI.FG_WHITE + ANSI.BRIGHT;
 
-    if (style === 'large') {
-      // Style 1: double-line box with shade accents — for Main Menu
-      const innerWidth = Math.max(upper.length + 10, 54);
-      const titlePad = Math.floor((innerWidth - upper.length) / 2);
-      const titleRight = innerWidth - upper.length - titlePad;
-      const shadeBar = '\u2591\u2592\u2593\u2588';  // ░▒▓█
-      const shadeBarR = '\u2588\u2593\u2592\u2591';  // █▓▒░
-      const offset = Math.floor((this.width - innerWidth - 4) / 2);
-      const pad = offset > 0 ? ' '.repeat(offset) : '';
+    // All banners use the same total width (54) to match menu box
+    const totalWidth = 54;
+    const innerWidth = totalWidth - 2; // inside the border chars
+    const menuOffset = Math.floor((this.width - totalWidth) / 2);
+    const pad = menuOffset > 0 ? ' '.repeat(menuOffset) : '';
 
-      this.write('\r\n');
-      this.write(pad + borderClr + BOX.D_TOP_LEFT + BOX.D_HORIZONTAL.repeat(innerWidth + 2) + BOX.D_TOP_RIGHT + ANSI.RESET + '\r\n');
-      this.write(pad + borderClr + BOX.D_VERTICAL + ANSI.RESET);
-      this.write(accentClr + ' ' + shadeBar + ANSI.RESET);
-      this.write(titleClr + ' '.repeat(titlePad - 5) + upper + ' '.repeat(titleRight - 5) + ANSI.RESET);
-      this.write(accentClr + shadeBarR + ' ' + ANSI.RESET);
-      this.write(borderClr + BOX.D_VERTICAL + ANSI.RESET + '\r\n');
-      this.write(pad + borderClr + BOX.D_BOTTOM_LEFT + BOX.D_HORIZONTAL.repeat(innerWidth + 2) + BOX.D_BOTTOM_RIGHT + ANSI.RESET + '\r\n');
-    } else if (style === 'medium') {
-      // Style 2: bordered with corner accents — for Forums, Mail, Files
-      const innerWidth = Math.max(upper.length + 8, 40);
-      const titlePad = Math.floor((innerWidth - upper.length - 4) / 2);
-      const titleRight = innerWidth - upper.length - 4 - titlePad;
-      const offset = Math.floor((this.width - innerWidth - 2) / 2);
-      const pad = offset > 0 ? ' '.repeat(offset) : '';
+    if (style === 'large') {
+      // Double-line box with shade accents — for Main Menu
+      const shadeBar = '\u2591\u2592\u2593\u2588';  // ░▒▓█  (4 chars)
+      const shadeBarR = '\u2588\u2593\u2592\u2591';  // █▓▒░  (4 chars)
+      // Inside: space + shade(4) + space + title + space + shade(4) + space = title + 12
+      const titleSpace = innerWidth - 12;
+      const titleLeft = Math.floor((titleSpace - upper.length) / 2);
+      const titleRight = titleSpace - upper.length - titleLeft;
 
       this.write('\r\n');
       this.write(pad + borderClr + BOX.D_TOP_LEFT + BOX.D_HORIZONTAL.repeat(innerWidth) + BOX.D_TOP_RIGHT + ANSI.RESET + '\r\n');
       this.write(pad + borderClr + BOX.D_VERTICAL + ANSI.RESET);
-      this.write(titleClr + ' '.repeat(titlePad) + '\u2261 ' + upper + ' \u2261' + ' '.repeat(titleRight) + ANSI.RESET);
+      this.write(accentClr + ' ' + shadeBar + ' ' + ANSI.RESET);
+      this.write(titleClr + ' '.repeat(titleLeft) + upper + ' '.repeat(titleRight) + ANSI.RESET);
+      this.write(accentClr + ' ' + shadeBarR + ' ' + ANSI.RESET);
+      this.write(borderClr + BOX.D_VERTICAL + ANSI.RESET + '\r\n');
+      this.write(pad + borderClr + BOX.D_BOTTOM_LEFT + BOX.D_HORIZONTAL.repeat(innerWidth) + BOX.D_BOTTOM_RIGHT + ANSI.RESET + '\r\n');
+    } else if (style === 'medium') {
+      // Bordered with corner accents — for Forums, Mail, Files
+      // Inside: spaces + "= " + title + " =" + spaces = title + 4 + padding
+      const contentWidth = upper.length + 4; // "= TITLE ="
+      const leftPad = Math.floor((innerWidth - contentWidth) / 2);
+      const rightPad = innerWidth - contentWidth - leftPad;
+
+      this.write('\r\n');
+      this.write(pad + borderClr + BOX.D_TOP_LEFT + BOX.D_HORIZONTAL.repeat(innerWidth) + BOX.D_TOP_RIGHT + ANSI.RESET + '\r\n');
+      this.write(pad + borderClr + BOX.D_VERTICAL + ANSI.RESET);
+      this.write(' '.repeat(leftPad) + titleClr + '\u2261 ' + upper + ' \u2261' + ANSI.RESET + ' '.repeat(rightPad));
       this.write(borderClr + BOX.D_VERTICAL + ANSI.RESET + '\r\n');
       this.write(pad + borderClr + BOX.D_BOTTOM_LEFT + BOX.D_HORIZONTAL.repeat(innerWidth) + BOX.D_BOTTOM_RIGHT + ANSI.RESET + '\r\n');
     } else {
-      // Style 3: minimal color bars — for Games, Chat, Polls, etc.
+      // Minimal color bars — for Games, Chat, Polls, etc.
       const spaced = upper.split('').join(' ');
-      const barWidth = Math.max(spaced.length + 4, 30);
+      const barWidth = totalWidth;
       const titlePad = Math.floor((barWidth - spaced.length) / 2);
-      const offset = Math.floor((this.width - barWidth) / 2);
-      const pad = offset > 0 ? ' '.repeat(offset) : '';
+      const titleRight = barWidth - spaced.length - titlePad;
 
       this.write('\r\n');
       this.write(pad + borderClr + '\u2580'.repeat(barWidth) + ANSI.RESET + '\r\n');
-      this.write(pad + titleClr + ' '.repeat(titlePad) + spaced + ANSI.RESET + '\r\n');
+      this.write(pad + ' '.repeat(titlePad) + titleClr + spaced + ANSI.RESET + ' '.repeat(titleRight) + '\r\n');
       this.write(pad + borderClr + '\u2584'.repeat(barWidth) + ANSI.RESET + '\r\n');
     }
   }
@@ -305,7 +308,6 @@ export class BBSScreen {
     try { tc = getActiveTheme().colors; } catch (_) { tc = null; }
 
     const borderColor = tc ? color(tc.menuBorder.fg, null, tc.menuBorder.bright) : (ANSI.FG_CYAN + ANSI.BRIGHT);
-    const titleColor  = tc ? color(tc.menuTitle.fg, null, tc.menuTitle.bright) : (ANSI.FG_YELLOW + ANSI.BRIGHT);
     const keyColor    = tc ? color(tc.menuKey.fg, null, tc.menuKey.bright) : (ANSI.FG_GREEN + ANSI.BRIGHT);
     const itemColor   = tc ? color(tc.menuItem.fg, null, tc.menuItem.bright) : ANSI.FG_WHITE;
     const promptColor = tc ? color(tc.prompt.fg, null, tc.prompt.bright) : (ANSI.FG_YELLOW + ANSI.BRIGHT);
@@ -314,22 +316,29 @@ export class BBSScreen {
     const bannerStyle = title.toUpperCase() === 'MAIN MENU' ? 'large' : 'medium';
     this.sectionBanner(title, bannerStyle);
 
-    // Menu items — improved format: "  [K]  Item Text"
-    const menuWidth = 54;
-    const menuOffset = Math.floor((this.width - menuWidth) / 2);
+    // Menu layout: fixed 52 visible characters inside the box
+    // Border chars: left + right = 2, so total line = 54 visible chars
+    const innerWidth = 52;
+    const totalWidth = innerWidth + 2;
+    const menuOffset = Math.floor((this.width - totalWidth) / 2);
     const menuPad = menuOffset > 0 ? ' '.repeat(menuOffset) : '';
 
-    this.write('\r\n');
+    // Top border
+    this.write(menuPad + borderColor + BOX.TOP_LEFT + BOX.HORIZONTAL.repeat(innerWidth) + BOX.TOP_RIGHT + ANSI.RESET + '\r\n');
+
+    // Menu items: "│  [K]  Item Text                              │"
+    // Inside: 2 spaces + [K] (3) + 2 spaces + text padded to (innerWidth - 7) = 45
+    const textWidth = innerWidth - 7;
     items.forEach(item => {
       this.write(menuPad);
-      this.write(borderColor + BOX.VERTICAL + ANSI.RESET + '  ');
-      this.write(keyColor + '[' + item.key + ']' + ANSI.RESET + '  ');
-      this.write(itemColor + padText(item.text, menuWidth - 10) + ANSI.RESET);
+      this.write(borderColor + BOX.VERTICAL + ANSI.RESET);
+      this.write('  ' + keyColor + '[' + item.key + ']' + ANSI.RESET);
+      this.write('  ' + itemColor + padText(item.text, textWidth) + ANSI.RESET);
       this.write(borderColor + BOX.VERTICAL + ANSI.RESET + '\r\n');
     });
 
-    // Separator
-    this.write(menuPad + borderColor + BOX.BOTTOM_LEFT + BOX.HORIZONTAL.repeat(menuWidth - 2) + BOX.BOTTOM_RIGHT + ANSI.RESET + '\r\n');
+    // Bottom border
+    this.write(menuPad + borderColor + BOX.BOTTOM_LEFT + BOX.HORIZONTAL.repeat(innerWidth) + BOX.BOTTOM_RIGHT + ANSI.RESET + '\r\n');
 
     this.write('\r\n');
     this.write(menuPad + promptColor + prompt + ': ' + ANSI.RESET);
