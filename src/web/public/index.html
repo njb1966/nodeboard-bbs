@@ -254,39 +254,32 @@
 
             <div class="terminal-instructions">
               <p class="text-white">
-                Connect to the BBS directly from your browser using the terminal below.
-                No additional software required!
+                Connect to the BBS directly from your browser using the web terminal.
+                No additional software required! Full ANSI graphics and color support
+                via xterm.js.
               </p>
               <p class="text-yellow">
-                Click inside the terminal and press any key to begin...
+                The terminal opens in a dedicated full-screen page for the best experience.
               </p>
             </div>
 
-            <div class="terminal-container">
-              <div id="fTelnetContainer" style="width: 100%; height: 600px; border: 2px solid #00ffff;">
-                <!-- fTelnet terminal will be loaded here -->
-              </div>
+            <div style="text-align: center; margin: 40px 0;">
+              <a href="/terminal" class="connect-button" style="display: inline-block; text-decoration: none; padding: 16px 48px;">
+                <span class="text-yellow" style="font-size: 18px;">» Launch Web Terminal «</span>
+              </a>
             </div>
 
-            <script src="https://embed-v2.ftelnet.ca/js/ftelnet-loader.norip.js"></script>
-            <script>
-              var Options = new fTelnetOptions();
-              Options.HostName = 'soulthread.ignorelist.com';
-              Options.Port = 2323;
-              Options.ConnectionType = 'telnet';
-              Options.ScreenColumns = 80;
-              Options.ScreenRows = 25;
-              Options.ForceWss = false;
-              Options.ProxyHostName = 'embed-v2.ftelnet.ca';
-              Options.ProxyPort = 1123;
-              Options.ProxyPortSecure = 11235;
-              var fTelnet = new fTelnetClient('fTelnetContainer', Options);
-            </script>
+            <div style="text-align: center; margin: 20px 0;">
+              <a href="/terminal" target="_blank" style="color: #00ffff; font-size: 13px;">
+                Or open in a new tab
+              </a>
+            </div>
 
             <div class="terminal-note">
               <p class="text-white">
-                <span class="text-yellow">Note:</span> The web terminal connects via WebSocket proxy.
-                For the best experience, we recommend using a dedicated telnet client like
+                <span class="text-yellow">Note:</span> The web terminal connects directly to the BBS
+                via WebSocket with full ANSI/VT100 terminal emulation.
+                For an alternative experience, you can also use a dedicated telnet client like
                 <span class="text-cyan">SyncTERM</span> or <span class="text-cyan">PuTTY</span>.
               </p>
             </div>

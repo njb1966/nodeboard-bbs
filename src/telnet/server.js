@@ -5,6 +5,7 @@ import net from 'net';
 import config from '../config/index.js';
 import { TelnetConnection } from './connection.js';
 import { Session } from '../models/Session.js';
+import { isBanned } from '../services/RateLimiter.js';
 
 /** @type {TelnetServer|null} Singleton server instance for cross-module access */
 let serverInstance = null;
@@ -31,6 +32,37 @@ export function getConnectionByNode(nodeNum) {
     if (conn.nodeNumber === nodeNum) return conn;
   }
   return undefined;
+}
+
+/**
+ * Register an external connection (e.g. SSH) with the shared connection pool.
+ * Allocates a node number and adds the connection to the connections Map.
+ * @param {string} connId - Unique connection identifier
+ * @param {TelnetConnection} connection - The connection object
+ * @returns {number} The assigned node number
+ */
+export function registerConnection(connId, connection) {
+  if (!serverInstance) throw new Error('TelnetServer not initialised');
+  if (serverInstance.connections.size >= serverInstance.config.maxConnections) {
+    throw new Error('System at maximum capacity');
+  }
+  const nodeNum = serverInstance.allocateNode();
+  connection.nodeNumber = nodeNum;
+  serverInstance.connections.set(connId, connection);
+  return nodeNum;
+}
+
+/**
+ * Unregister a connection from the shared connection pool.
+ * @param {string} connId - Unique connection identifier
+ */
+export function unregisterConnection(connId) {
+  if (!serverInstance) return;
+  const connection = serverInstance.connections.get(connId);
+  if (connection) {
+    serverInstance.releaseNode(connection.nodeNumber);
+    serverInstance.connections.delete(connId);
+  }
 }
 
 export class TelnetServer {
@@ -102,6 +134,14 @@ export class TelnetServer {
     const connId = `${remoteAddress}:${remotePort}`;
 
     console.log(`New connection from ${connId}`);
+
+    // Check IP ban immediately before allocating resources
+    if (isBanned(remoteAddress)) {
+      console.log(`Banned IP rejected: ${remoteAddress}`);
+      socket.write('Your IP has been banned.\r\n');
+      socket.end();
+      return;
+    }
 
     // Check max connections
     if (this.connections.size >= this.config.maxConnections) {

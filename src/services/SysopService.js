@@ -5,6 +5,8 @@ import getDatabase from '../database/db.js';
 import { colorText } from '../utils/ansi.js';
 import { Session } from '../models/Session.js';
 import { User } from '../models/User.js';
+import { getConnections } from '../telnet/server.js';
+import { banIP, unbanIP, getBannedIPs } from './RateLimiter.js';
 import config from '../config/index.js';
 
 export class SysopService {
@@ -28,6 +30,8 @@ export class SysopService {
         { key: 'S', text: 'System Statistics' },
         { key: 'L', text: 'View System Logs' },
         { key: 'E', text: 'Active Sessions' },
+        { key: 'K', text: 'Kick User' },
+        { key: 'I', text: 'IP Ban Management' },
         { key: 'Q', text: 'Return to Main Menu' },
       ];
 
@@ -66,6 +70,14 @@ export class SysopService {
 
         case 'E':
           await this.activeSessions();
+          break;
+
+        case 'K':
+          await this.kickUser();
+          break;
+
+        case 'I':
+          await this.ipBanManagement();
           break;
 
         case 'Q':
@@ -558,6 +570,230 @@ export class SysopService {
     this.connection.write(colorText(`Total: ${sessions.length}`, 'yellow', null, true) + '\r\n');
     this.connection.write('\r\n');
     this.connection.write(colorText('Press any key to continue...', 'white') + '\r\n');
+    await this.connection.getChar();
+  }
+
+  /**
+   * Kick User — disconnect an online user by node number
+   */
+  async kickUser() {
+    const connections = getConnections();
+
+    this.screen.clear();
+    this.connection.write('\r\n');
+    this.connection.write(colorText('KICK USER', 'yellow', null, true) + '\r\n');
+    this.connection.write(colorText('='.repeat(80), 'cyan', null, true) + '\r\n\r\n');
+
+    // Show online users
+    const onlineUsers = [];
+    for (const conn of connections.values()) {
+      if (conn.isAuthenticated() && conn.nodeNumber !== this.connection.nodeNumber) {
+        onlineUsers.push(conn);
+        this.connection.write(
+          colorText(`  Node ${String(conn.nodeNumber).padEnd(4)}`, 'cyan', null, true) +
+          colorText((conn.user.username || 'Unknown').padEnd(20), 'white') +
+          colorText(conn.activity || 'Idle', 'green') +
+          '\r\n'
+        );
+      }
+    }
+
+    if (onlineUsers.length === 0) {
+      this.connection.write(colorText('No other users online to kick.', 'white') + '\r\n');
+      this.connection.write('\r\n');
+      this.connection.write(colorText('Press any key to continue...', 'white') + '\r\n');
+      await this.connection.getChar();
+      return;
+    }
+
+    this.connection.write('\r\n');
+    const nodeInput = await this.connection.getInput('Enter node number to kick (or Q to cancel): ');
+    this.connection.write('\r\n');
+
+    if (!nodeInput || nodeInput.toUpperCase() === 'Q') return;
+
+    const nodeNum = parseInt(nodeInput);
+    if (isNaN(nodeNum)) {
+      this.screen.messageBox('Error', 'Invalid node number.', 'error');
+      await this.connection.getChar();
+      return;
+    }
+
+    // Prevent kicking yourself
+    if (nodeNum === this.connection.nodeNumber) {
+      this.screen.messageBox('Error', 'You cannot kick yourself.', 'error');
+      await this.connection.getChar();
+      return;
+    }
+
+    // Find the connection by node number
+    let targetConn = null;
+    for (const conn of connections.values()) {
+      if (conn.nodeNumber === nodeNum) {
+        targetConn = conn;
+        break;
+      }
+    }
+
+    if (!targetConn || !targetConn.isAuthenticated()) {
+      this.screen.messageBox('Error', 'No authenticated user found on that node.', 'error');
+      await this.connection.getChar();
+      return;
+    }
+
+    const targetName = targetConn.user.username;
+
+    // Confirm
+    this.connection.write(colorText(`Kick ${targetName} from node ${nodeNum}? (Y/N): `, 'yellow', null, true));
+    const confirm = (await this.connection.getInput()).toUpperCase();
+    this.connection.write('\r\n');
+
+    if (confirm !== 'Y') {
+      this.screen.messageBox('Info', 'Action cancelled.', 'info');
+      await this.connection.getChar();
+      return;
+    }
+
+    // Send disconnect message to the target user
+    try {
+      targetConn.write(colorText('\r\n\r\nYou have been disconnected by the Sysop.\r\n', 'red', null, true));
+    } catch (_) {
+      // Socket may already be in a bad state
+    }
+
+    // End the session in the database
+    if (targetConn.session) {
+      Session.forceEnd(targetConn.session.id);
+    }
+
+    // Close the socket
+    try {
+      targetConn.socket.end();
+    } catch (_) {
+      try { targetConn.socket.destroy(); } catch (_e) { /* ignore */ }
+    }
+
+    this.screen.messageBox('Success', `${targetName} has been kicked from node ${nodeNum}.`, 'success');
+    await this.connection.getChar();
+  }
+
+  /**
+   * IP Ban Management — list, ban, unban IPs
+   */
+  async ipBanManagement() {
+    while (true) {
+      const banned = getBannedIPs();
+
+      this.screen.clear();
+      this.connection.write('\r\n');
+      this.connection.write(colorText('IP BAN MANAGEMENT', 'yellow', null, true) + '\r\n');
+      this.connection.write(colorText('='.repeat(80), 'cyan', null, true) + '\r\n\r\n');
+
+      if (banned.length === 0) {
+        this.connection.write(colorText('No banned IPs.', 'white') + '\r\n');
+      } else {
+        this.connection.write(
+          colorText('  #   ', 'cyan', null, true) +
+          colorText('IP Address'.padEnd(20), 'white', null, true) +
+          colorText('Reason'.padEnd(30), 'white', null, true) +
+          colorText('Banned By'.padEnd(15), 'white', null, true) +
+          colorText('Date', 'white', null, true) +
+          '\r\n'
+        );
+        this.connection.write(colorText('  ' + '-'.repeat(76), 'cyan') + '\r\n');
+
+        banned.forEach((entry, idx) => {
+          const date = new Date(entry.banned_at).toLocaleDateString();
+          this.connection.write(
+            colorText(`  ${String(idx + 1).padEnd(4)}`, 'cyan', null, true) +
+            colorText((entry.ip_address || '').padEnd(20), 'white') +
+            colorText((entry.reason || 'No reason').padEnd(30), 'yellow') +
+            colorText((entry.banned_by || 'System').padEnd(15), 'white') +
+            colorText(date, 'cyan') +
+            '\r\n'
+          );
+        });
+      }
+
+      this.connection.write('\r\n');
+      this.connection.write(colorText('[B]an IP  [U]nban IP  [Q]uit: ', 'yellow', null, true));
+
+      const choice = (await this.connection.getInput()).toUpperCase();
+
+      if (choice === 'Q' || choice === '') {
+        return;
+      } else if (choice === 'B') {
+        await this.banIPPrompt();
+      } else if (choice === 'U') {
+        await this.unbanIPPrompt(banned);
+      }
+    }
+  }
+
+  /**
+   * Prompt to ban an IP address
+   */
+  async banIPPrompt() {
+    this.connection.write('\r\n');
+    const ip = await this.connection.getInput('IP address to ban: ');
+    this.connection.write('\r\n');
+
+    if (!ip) return;
+
+    const reason = await this.connection.getInput('Reason (optional): ');
+    this.connection.write('\r\n');
+
+    this.connection.write(colorText(`Ban IP ${ip}? (Y/N): `, 'yellow', null, true));
+    const confirm = (await this.connection.getInput()).toUpperCase();
+    this.connection.write('\r\n');
+
+    if (confirm !== 'Y') {
+      this.screen.messageBox('Info', 'Action cancelled.', 'info');
+      await this.connection.getChar();
+      return;
+    }
+
+    banIP(ip, reason || null, this.user.username);
+    this.screen.messageBox('Success', `IP ${ip} has been banned.`, 'success');
+    await this.connection.getChar();
+  }
+
+  /**
+   * Prompt to unban an IP address
+   */
+  async unbanIPPrompt(banned) {
+    if (banned.length === 0) {
+      this.screen.messageBox('Info', 'No banned IPs to unban.', 'info');
+      await this.connection.getChar();
+      return;
+    }
+
+    this.connection.write('\r\n');
+    const numInput = await this.connection.getInput('Enter ban number to remove (or Q to cancel): ');
+    this.connection.write('\r\n');
+
+    if (!numInput || numInput.toUpperCase() === 'Q') return;
+
+    const idx = parseInt(numInput) - 1;
+    if (isNaN(idx) || idx < 0 || idx >= banned.length) {
+      this.screen.messageBox('Error', 'Invalid selection.', 'error');
+      await this.connection.getChar();
+      return;
+    }
+
+    const entry = banned[idx];
+    this.connection.write(colorText(`Unban IP ${entry.ip_address}? (Y/N): `, 'yellow', null, true));
+    const confirm = (await this.connection.getInput()).toUpperCase();
+    this.connection.write('\r\n');
+
+    if (confirm !== 'Y') {
+      this.screen.messageBox('Info', 'Action cancelled.', 'info');
+      await this.connection.getChar();
+      return;
+    }
+
+    unbanIP(entry.ip_address);
+    this.screen.messageBox('Success', `IP ${entry.ip_address} has been unbanned.`, 'success');
     await this.connection.getChar();
   }
 

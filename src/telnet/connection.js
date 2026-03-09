@@ -8,14 +8,23 @@ import { Session } from '../models/Session.js';
 import { MainMenu } from '../services/menus/MainMenu.js';
 import { LoginSequence } from '../services/LoginSequence.js';
 import { removeFromAllRooms } from '../services/ChatRoomManager.js';
+import { isLocked, isBanned, getRemainingLockout, recordFailedLogin, recordSuccessfulLogin } from '../services/RateLimiter.js';
 import config from '../config/index.js';
 
 export class TelnetConnection {
-  constructor(socket, remoteAddress) {
+  /**
+   * @param {import('net').Socket|import('stream').Duplex} socket - TCP socket or SSH channel
+   * @param {string} remoteAddress
+   * @param {object} [options]
+   * @param {'telnet'|'ssh'} [options.protocol='telnet']
+   * @param {import('../models/User.js').User|null} [options.user=null] - Pre-authenticated user (SSH)
+   */
+  constructor(socket, remoteAddress, options = {}) {
     this.socket = socket;
     this.remoteAddress = remoteAddress;
+    this.protocol = options.protocol || 'telnet';
     this.screen = new BBSScreen(socket);
-    this.user = null;
+    this.user = options.user || null;
     this.session = null;
     this.inputBuffer = '';
     this.inputMode = 'line'; // 'line' or 'char'
@@ -34,8 +43,10 @@ export class TelnetConnection {
     this.pageQueue = [];
     this.chatMessageHandler = null;
 
-    // Telnet negotiation
-    this.setupTelnet();
+    // Telnet negotiation (skip for SSH)
+    if (this.protocol === 'telnet') {
+      this.setupTelnet();
+    }
 
     // Handle incoming data
     this.socket.on('data', (data) => this.handleData(data));
@@ -55,9 +66,27 @@ export class TelnetConnection {
   }
 
   /**
-   * Start the connection
+   * Start the connection.
+   * For SSH connections with a pre-authenticated user, skip the login flow.
    */
   async start() {
+    if (this.protocol === 'ssh' && this.user) {
+      // SSH: user already authenticated at the transport layer
+      this.user.updateLastLogin();
+      this.session = Session.create(this.user.id, this.user.username, this.remoteAddress);
+
+      this.screen.welcomeScreen(config.bbs.name, config.bbs.version);
+      this.screen.messageBox('Welcome', `Welcome back, ${this.user.username}!`, 'success');
+      await this.getChar();
+
+      this.setActivity('Main Menu');
+
+      const loginSeq = new LoginSequence(this);
+      await loginSeq.show();
+      await this.mainMenu();
+      return;
+    }
+
     this.screen.welcomeScreen(config.bbs.name, config.bbs.version);
     await this.login();
   }
@@ -66,10 +95,15 @@ export class TelnetConnection {
    * Handle incoming data
    */
   handleData(data) {
-    // Filter out telnet commands
-    const filtered = this.filterTelnetCommands(data);
-
-    if (filtered.length === 0) return;
+    // Filter out telnet commands (not needed for SSH)
+    let filtered;
+    if (this.protocol === 'telnet') {
+      filtered = this.filterTelnetCommands(data);
+      if (filtered.length === 0) return;
+    } else {
+      filtered = Buffer.isBuffer(data) ? data : Buffer.from(data);
+      if (filtered.length === 0) return;
+    }
 
     // Convert to string
     const input = filtered.toString('utf8');
@@ -182,6 +216,22 @@ export class TelnetConnection {
    * Login process
    */
   async login() {
+    // Check IP ban before anything else
+    if (isBanned(this.remoteAddress)) {
+      this.write(colorText('\r\nYour IP has been banned.\r\n', 'red'));
+      this.socket.end();
+      return;
+    }
+
+    // Check IP lockout from too many failed attempts
+    if (isLocked(this.remoteAddress)) {
+      const remaining = getRemainingLockout(this.remoteAddress);
+      const minutes = Math.ceil(remaining / 60);
+      this.write(colorText(`\r\nToo many failed attempts. Try again in ${minutes} minute${minutes !== 1 ? 's' : ''}.\r\n`, 'red'));
+      this.socket.end();
+      return;
+    }
+
     let attempts = 0;
     const maxAttempts = config.security.maxLoginAttempts;
 
@@ -211,6 +261,17 @@ export class TelnetConnection {
       const user = User.findByUsername(username);
 
       if (user && await user.verifyPassword(password)) {
+        // Check max sessions per user
+        const activeSessions = Session.getActiveByUserId(user.id);
+        if (activeSessions >= config.session.maxPerUser) {
+          this.screen.messageBox('Error', 'You already have the maximum number of active sessions. Please disconnect from another session first.', 'error');
+          await this.getChar();
+          this.socket.end();
+          return;
+        }
+
+        recordSuccessfulLogin(this.remoteAddress);
+
         this.user = user;
         user.updateLastLogin();
 
@@ -229,6 +290,17 @@ export class TelnetConnection {
         return;
       } else {
         attempts++;
+        recordFailedLogin(this.remoteAddress);
+
+        // Re-check if now locked out
+        if (isLocked(this.remoteAddress)) {
+          const remaining = getRemainingLockout(this.remoteAddress);
+          const minutes = Math.ceil(remaining / 60);
+          this.write(colorText(`\r\nToo many failed attempts. Try again in ${minutes} minute${minutes !== 1 ? 's' : ''}.\r\n`, 'red'));
+          this.socket.end();
+          return;
+        }
+
         this.screen.messageBox('Error', `Invalid username or password. ${maxAttempts - attempts} attempts remaining.`, 'error');
         await this.getChar();
       }

@@ -55,6 +55,43 @@ export class Session {
   }
 
   /**
+   * Get active sessions for a specific user
+   * @param {number} userId
+   * @returns {Session[]}
+   */
+  static getByUserId(userId) {
+    const db = getDatabase();
+    const sessions = db.prepare(`
+      SELECT * FROM sessions
+      WHERE user_id = ? AND status = 'active'
+      ORDER BY connected_at DESC
+    `).all(userId);
+
+    return sessions.map(s => new Session(s));
+  }
+
+  /**
+   * Count active sessions for a specific user
+   * @param {number} userId
+   * @returns {number}
+   */
+  static getActiveByUserId(userId) {
+    const db = getDatabase();
+    return db.prepare(
+      "SELECT COUNT(*) as count FROM sessions WHERE user_id = ? AND status = 'active'"
+    ).get(userId).count;
+  }
+
+  /**
+   * Forcefully end a session (for sysop kick)
+   * @param {string} sessionId
+   */
+  static forceEnd(sessionId) {
+    const db = getDatabase();
+    db.prepare("UPDATE sessions SET status = 'ended' WHERE id = ?").run(sessionId);
+  }
+
+  /**
    * Get all active sessions
    */
   static getActive() {

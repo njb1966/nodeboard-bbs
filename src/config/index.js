@@ -22,6 +22,13 @@ export const config = {
     maxConnections: parseInt(process.env.MAX_CONNECTIONS || '50'),
   },
 
+  // SSH Server Settings
+  ssh: {
+    enabled: process.env.SSH_ENABLED !== 'false',
+    port: parseInt(process.env.SSH_PORT || '2222'),
+    hostKeyPath: process.env.SSH_HOST_KEY_PATH || join(rootDir, 'data/ssh_host_key'),
+  },
+
   // Web Server Settings
   web: {
     enabled: true,
@@ -47,6 +54,7 @@ export const config = {
   session: {
     timeout: parseInt(process.env.SESSION_TIMEOUT || '1800000'), // 30 minutes
     idleWarning: 300000, // 5 minutes
+    maxPerUser: parseInt(process.env.MAX_SESSIONS_PER_USER || '2'),
   },
 
   // Security

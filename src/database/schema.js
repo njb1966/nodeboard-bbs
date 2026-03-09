@@ -200,6 +200,16 @@ export const SCHEMA = {
       UNIQUE(poll_id, user_id)
     )
   `,
+
+  banned_ips: `
+    CREATE TABLE IF NOT EXISTS banned_ips (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      ip_address TEXT NOT NULL UNIQUE,
+      reason TEXT,
+      banned_by TEXT,
+      banned_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `,
 };
 
 export const INDEXES = [
@@ -214,6 +224,7 @@ export const INDEXES = [
   'CREATE INDEX IF NOT EXISTS idx_oneliners_created ON oneliners(created_at)',
   'CREATE INDEX IF NOT EXISTS idx_poll_options_poll ON poll_options(poll_id)',
   'CREATE INDEX IF NOT EXISTS idx_poll_votes_poll_user ON poll_votes(poll_id, user_id)',
+  'CREATE INDEX IF NOT EXISTS idx_banned_ips_address ON banned_ips(ip_address)',
 ];
 
 export const DEFAULT_DATA = {

@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NodeBoard BBS - Web Terminal</title>
+  <link rel="stylesheet" href="/xterm/css/xterm.css">
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      background: #000;
+      overflow: hidden;
+    }
+    #terminal-container {
+      width: 100%;
+      height: 100%;
+    }
+    .xterm {
+      height: 100%;
+    }
+    /* Reconnect overlay */
+    #overlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0, 0, 0, 0.85);
+      z-index: 1000;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+      font-family: 'Courier New', Courier, monospace;
+      color: #00ffff;
+    }
+    #overlay.visible {
+      display: flex;
+    }
+    #overlay h2 {
+      color: #ffff00;
+      margin-bottom: 20px;
+    }
+    #overlay button {
+      background: #000;
+      color: #00ff00;
+      border: 2px solid #00ffff;
+      padding: 12px 32px;
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 16px;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+    #overlay button:hover {
+      background: #1a1a1a;
+      box-shadow: 0 0 15px rgba(0, 255, 255, 0.5);
+    }
+  </style>
+</head>
+<body>
+  <div id="terminal-container"></div>
+  <div id="overlay">
+    <h2>Disconnected from BBS</h2>
+    <p>The connection to NodeBoard BBS has been closed.</p>
+    <button onclick="location.reload()">Reconnect</button>
+    <button onclick="window.location.href='/'">Back to Homepage</button>
+  </div>
+  <script type="module" src="/terminal.js"></script>
+</body>
+</html>
