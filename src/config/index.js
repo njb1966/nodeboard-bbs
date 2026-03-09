@@ -73,6 +73,13 @@ export const config = {
     requireEmailVerification: false,
   },
 
+  // File transfer settings
+  files: {
+    ratioEnabled: process.env.FILE_RATIO_ENABLED === 'true' || false,
+    downloadRatio: parseInt(process.env.FILE_DOWNLOAD_RATIO || '5'),   // 1 upload per N downloads
+    exemptLevel: parseInt(process.env.FILE_EXEMPT_LEVEL || '90'),      // security level exempt from ratios
+  },
+
   // ANSI Settings
   terminal: {
     width: 80,

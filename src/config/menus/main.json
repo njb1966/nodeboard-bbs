@@ -8,6 +8,7 @@
     { "key": "N", "text": "New Message Scan", "action": "newScan" },
     { "key": "P", "text": "Private Mail", "action": "mail", "badge": "unreadMail" },
     { "key": "F", "text": "File Areas", "action": "files" },
+    { "key": "Z", "text": "New File Scan", "action": "newFileScan" },
     { "key": "D", "text": "Door Games", "action": "doors" },
     { "key": "U", "text": "User List", "action": "userList" },
     { "key": "W", "text": "Who's Online", "action": "whosOnline" },

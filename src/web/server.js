@@ -4,12 +4,14 @@
 import express from 'express';
 import { WebSocketServer } from 'ws';
 import { createServer } from 'http';
+import { createReadStream, existsSync } from 'fs';
 import { EventEmitter } from 'events';
 import config from '../config/index.js';
 import { TelnetConnection } from '../telnet/connection.js';
 import { getConnections } from '../telnet/server.js';
+import { redeemDownloadToken } from '../services/DownloadTokenService.js';
 import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
+import { dirname, join, basename } from 'path';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -200,6 +202,30 @@ export class WebServer {
     // Terminal page
     this.app.get('/terminal', (req, res) => {
       res.sendFile(join(__dirname, 'public', 'terminal.html'));
+    });
+
+    // File download endpoint (token-based, single-use, time-limited)
+    this.app.get('/download/:token', (req, res) => {
+      const tokenData = redeemDownloadToken(req.params.token);
+
+      if (!tokenData) {
+        return res.status(404).send('Download link has expired or is invalid.');
+      }
+
+      if (!existsSync(tokenData.filePath)) {
+        return res.status(404).send('File not found on server.');
+      }
+
+      res.setHeader('Content-Disposition', `attachment; filename="${basename(tokenData.fileName)}"`);
+      res.setHeader('Content-Type', 'application/octet-stream');
+
+      const stream = createReadStream(tokenData.filePath);
+      stream.pipe(res);
+      stream.on('error', () => {
+        if (!res.headersSent) {
+          res.status(500).send('Error reading file.');
+        }
+      });
     });
 
     // API endpoints (basic)

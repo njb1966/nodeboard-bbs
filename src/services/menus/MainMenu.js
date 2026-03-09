@@ -61,6 +61,13 @@ export class MainMenu {
       this.connection.setActivity('Main Menu');
     });
 
+    engine.registerAction('newFileScan', async () => {
+      this.connection.setActivity('New File Scan');
+      const fileService = new FileService(this.connection);
+      await fileService.newFilesScan();
+      this.connection.setActivity('Main Menu');
+    });
+
     engine.registerAction('doors', async () => {
       this.connection.setActivity('Playing Door Games');
       const doorService = new DoorService(this.connection);
