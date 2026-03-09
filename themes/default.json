@@ -1,0 +1,21 @@
+{
+  "name": "Default",
+  "author": "System",
+  "colors": {
+    "header":     { "fg": "cyan",    "bright": true },
+    "menuBorder": { "fg": "cyan",    "bright": true },
+    "menuTitle":  { "fg": "yellow",  "bright": true },
+    "menuItem":   { "fg": "white",   "bright": false },
+    "menuKey":    { "fg": "green",   "bright": true },
+    "prompt":     { "fg": "yellow",  "bright": true },
+    "text":       { "fg": "white",   "bright": false },
+    "error":      { "fg": "red",     "bright": true },
+    "success":    { "fg": "green",   "bright": true },
+    "info":       { "fg": "cyan",    "bright": false }
+  },
+  "art": {
+    "welcome": "",
+    "goodbye": "",
+    "login": ""
+  }
+}

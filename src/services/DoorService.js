@@ -6,6 +6,7 @@
  */
 import getDatabase from '../database/db.js';
 import { colorText } from '../utils/ansi.js';
+import { logEvent } from './LogService.js';
 import config from '../config/index.js';
 import { spawn } from 'child_process';
 import { existsSync, writeFileSync, mkdirSync } from 'fs';
@@ -124,6 +125,7 @@ export class DoorService {
       // Update play count
       const db = getDatabase();
       db.prepare('UPDATE doors SET times_played = times_played + 1 WHERE id = ?').run(door.id);
+      logEvent('SYSTEM', this.user.id, this.user.username, `Played door game: ${door.name} (${minutesUsed} min)`, this.connection.remoteAddress);
 
       this.connection.write('\r\n\r\n');
       this.connection.write(colorText(`Game ended. Used ${minutesUsed} minute${minutesUsed !== 1 ? 's' : ''}.`, 'cyan') + '\r\n');

@@ -10,6 +10,7 @@ import { LoginSequence } from '../services/LoginSequence.js';
 import { removeFromAllRooms } from '../services/ChatRoomManager.js';
 import { isLocked, isBanned, getRemainingLockout, recordFailedLogin, recordSuccessfulLogin } from '../services/RateLimiter.js';
 import { AchievementService } from '../services/AchievementService.js';
+import { logEvent } from '../services/LogService.js';
 import config from '../config/index.js';
 
 export class TelnetConnection {
@@ -282,6 +283,7 @@ export class TelnetConnection {
 
         this.user = user;
         user.updateLastLogin();
+        logEvent('LOGIN', user.id, user.username, `User logged in via ${this.protocol}`, this.remoteAddress);
 
         // Create session
         this.session = Session.create(user.id, user.username, this.remoteAddress);
@@ -306,6 +308,7 @@ export class TelnetConnection {
       } else {
         attempts++;
         recordFailedLogin(this.remoteAddress);
+        logEvent('LOGIN_FAILED', null, username, `Failed login attempt (${attempts}/${maxAttempts})`, this.remoteAddress);
 
         // Re-check if now locked out
         if (isLocked(this.remoteAddress)) {
@@ -368,6 +371,7 @@ export class TelnetConnection {
     try {
       this.user = await User.create(username, password, email || null, realName || null);
       this.user.updateLastLogin();
+      logEvent('SIGNUP', this.user.id, this.user.username, 'New user registered', this.remoteAddress);
 
       // Create session
       this.session = Session.create(this.user.id, this.user.username, this.remoteAddress);
@@ -430,6 +434,7 @@ export class TelnetConnection {
       const duration = Math.floor((Date.now() - this.connectTime.getTime()) / 1000);
       if (this.user) {
         this.user.updateTimeOnline(duration);
+        logEvent('LOGOUT', this.user.id, this.user.username, `User disconnected (${Math.floor(duration / 60)} min online)`, this.remoteAddress);
       }
 
       this.session.end();

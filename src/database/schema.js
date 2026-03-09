@@ -31,6 +31,7 @@ export const SCHEMA = {
       description TEXT,
       security_level INTEGER DEFAULT 10,
       post_count INTEGER DEFAULT 0,
+      sort_order INTEGER DEFAULT 0,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )
   `,
@@ -235,6 +236,21 @@ export const SCHEMA = {
       UNIQUE(user_id, achievement_id)
     )
   `,
+
+  scheduled_events: `
+    CREATE TABLE IF NOT EXISTS scheduled_events (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      description TEXT,
+      command TEXT NOT NULL,
+      schedule_type TEXT NOT NULL,
+      schedule_value TEXT NOT NULL,
+      last_run DATETIME,
+      next_run DATETIME,
+      enabled INTEGER DEFAULT 1,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `,
 };
 
 export const INDEXES = [
@@ -253,6 +269,8 @@ export const INDEXES = [
   'CREATE INDEX IF NOT EXISTS idx_game_scores_game_score ON game_scores(game_name, score DESC)',
   'CREATE INDEX IF NOT EXISTS idx_game_scores_user ON game_scores(user_id)',
   'CREATE INDEX IF NOT EXISTS idx_user_achievements_user ON user_achievements(user_id)',
+  'CREATE INDEX IF NOT EXISTS idx_scheduled_events_enabled ON scheduled_events(enabled)',
+  'CREATE INDEX IF NOT EXISTS idx_forums_sort_order ON forums(sort_order)',
 ];
 
 export const DEFAULT_DATA = {

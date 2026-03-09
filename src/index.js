@@ -4,6 +4,7 @@
 import { TelnetServer } from './telnet/server.js';
 import { WebServer } from './web/server.js';
 import { SSHServer } from './ssh/server.js';
+import * as EventScheduler from './services/EventScheduler.js';
 import config from './config/index.js';
 import { existsSync, writeFileSync, mkdirSync } from 'fs';
 import { dirname } from 'path';
@@ -63,6 +64,9 @@ if (config.web.enabled) {
   webServer.start();
 }
 
+// Start Event Scheduler
+EventScheduler.start();
+
 console.log();
 console.log(colorText('='.repeat(60), 'cyan', null, true));
 console.log(colorText('  BBS is now running!', 'green', null, true));
@@ -84,6 +88,7 @@ process.on('SIGINT', () => {
   console.log();
   console.log(colorText('Shutting down BBS...', 'yellow', null, true));
 
+  EventScheduler.stop();
   telnetServer.stop();
   if (sshServer) sshServer.stop();
 

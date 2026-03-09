@@ -12,6 +12,7 @@ import { existsSync, statSync, mkdirSync, readdirSync } from 'fs';
 import { join, basename, extname } from 'path';
 import { spawn, execFileSync } from 'child_process';
 import { generateDownloadToken } from './DownloadTokenService.js';
+import { logEvent } from './LogService.js';
 
 export class FileService {
   constructor(connection) {
@@ -335,6 +336,7 @@ export class FileService {
           // Update user upload count
           this.user.incrementUploads();
           this.user.uploads = (this.user.uploads || 0) + 1;
+          logEvent('FILE', this.user.id, this.user.username, `Uploaded: ${filename} (${this.formatFileSize(stat.size)})`, this.connection.remoteAddress);
 
           this.connection.write('\r\n');
           this.connection.write(
@@ -631,6 +633,7 @@ export class FileService {
     db.prepare('UPDATE files SET download_count = download_count + 1 WHERE id = ?').run(file.id);
     this.user.incrementDownloads();
     this.user.downloads = (this.user.downloads || 0) + 1;
+    logEvent('FILE', this.user.id, this.user.username, `Downloaded: ${file.original_name}`, this.connection.remoteAddress);
   }
 
   // ───────────────────────────── Utilities ─────────────────────────────

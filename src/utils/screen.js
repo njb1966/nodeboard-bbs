@@ -1,7 +1,8 @@
 /**
  * Screen buffer and rendering utilities
  */
-import { ANSI, BOX, cursorTo, drawBox, centerText, padText, colorText } from './ansi.js';
+import { ANSI, BOX, cursorTo, drawBox, centerText, padText, colorText, color } from './ansi.js';
+import { getActiveTheme } from '../services/ThemeService.js';
 
 export class Screen {
   constructor(width = 80, height = 24) {
@@ -111,34 +112,44 @@ export class BBSScreen {
   }
 
   /**
-   * Display menu
+   * Display menu — uses active theme colors when available.
    */
   menu(title, items, prompt = 'Selection') {
     this.clear();
 
+    // Load theme colours (safe fallback if theme service not ready)
+    let tc;
+    try { tc = getActiveTheme().colors; } catch (_) { tc = null; }
+
+    const borderColor = tc ? color(tc.menuBorder.fg, null, tc.menuBorder.bright) : (ANSI.FG_CYAN + ANSI.BRIGHT);
+    const titleColor  = tc ? color(tc.menuTitle.fg, null, tc.menuTitle.bright) : (ANSI.FG_YELLOW + ANSI.BRIGHT);
+    const keyColor    = tc ? color(tc.menuKey.fg, null, tc.menuKey.bright) : (ANSI.FG_GREEN + ANSI.BRIGHT);
+    const itemColor   = tc ? color(tc.menuItem.fg, null, tc.menuItem.bright) : ANSI.FG_WHITE;
+    const promptColor = tc ? color(tc.prompt.fg, null, tc.prompt.bright) : (ANSI.FG_YELLOW + ANSI.BRIGHT);
+
     this.write('\r\n');
-    this.write(ANSI.FG_CYAN + ANSI.BRIGHT + BOX.D_TOP_LEFT + BOX.D_HORIZONTAL.repeat(51) + BOX.D_TOP_RIGHT + '\r\n' + ANSI.RESET);
+    this.write(borderColor + BOX.D_TOP_LEFT + BOX.D_HORIZONTAL.repeat(51) + BOX.D_TOP_RIGHT + '\r\n' + ANSI.RESET);
 
     // Title line
     const titlePad = Math.floor((51 - title.length) / 2);
-    this.write(ANSI.FG_CYAN + ANSI.BRIGHT + BOX.D_VERTICAL + ANSI.RESET);
-    this.write(ANSI.FG_YELLOW + ANSI.BRIGHT);
+    this.write(borderColor + BOX.D_VERTICAL + ANSI.RESET);
+    this.write(titleColor);
     this.write(' '.repeat(titlePad) + title.toUpperCase() + ' '.repeat(51 - title.length - titlePad));
-    this.write(ANSI.RESET + ANSI.FG_CYAN + ANSI.BRIGHT + BOX.D_VERTICAL + '\r\n' + ANSI.RESET);
+    this.write(ANSI.RESET + borderColor + BOX.D_VERTICAL + '\r\n' + ANSI.RESET);
 
-    this.write(ANSI.FG_CYAN + ANSI.BRIGHT + BOX.D_T_RIGHT + BOX.D_HORIZONTAL.repeat(51) + BOX.D_LEFT + '\r\n' + ANSI.RESET);
+    this.write(borderColor + BOX.D_T_RIGHT + BOX.D_HORIZONTAL.repeat(51) + BOX.D_LEFT + '\r\n' + ANSI.RESET);
 
     // Menu items
     items.forEach(item => {
-      this.write(ANSI.FG_CYAN + ANSI.BRIGHT + BOX.D_VERTICAL + ' ' + ANSI.RESET);
-      this.write(ANSI.FG_GREEN + ANSI.BRIGHT + padText(item.key, 3) + ANSI.RESET);
-      this.write(ANSI.FG_WHITE + padText(item.text, 46) + ANSI.RESET);
-      this.write(ANSI.FG_CYAN + ANSI.BRIGHT + ' ' + BOX.D_VERTICAL + '\r\n' + ANSI.RESET);
+      this.write(borderColor + BOX.D_VERTICAL + ' ' + ANSI.RESET);
+      this.write(keyColor + padText(item.key, 3) + ANSI.RESET);
+      this.write(itemColor + padText(item.text, 46) + ANSI.RESET);
+      this.write(borderColor + ' ' + BOX.D_VERTICAL + '\r\n' + ANSI.RESET);
     });
 
-    this.write(ANSI.FG_CYAN + ANSI.BRIGHT + BOX.D_BOTTOM_LEFT + BOX.D_HORIZONTAL.repeat(51) + BOX.D_BOTTOM_RIGHT + '\r\n' + ANSI.RESET);
+    this.write(borderColor + BOX.D_BOTTOM_LEFT + BOX.D_HORIZONTAL.repeat(51) + BOX.D_BOTTOM_RIGHT + '\r\n' + ANSI.RESET);
     this.write('\r\n');
-    this.write(ANSI.FG_YELLOW + ANSI.BRIGHT + prompt + ': ' + ANSI.RESET);
+    this.write(promptColor + prompt + ': ' + ANSI.RESET);
   }
 
   /**

@@ -106,6 +106,15 @@ export function initializeDatabase() {
     db.exec('ALTER TABLE users ADD COLUMN door_time_bank INTEGER DEFAULT 60');
   }
 
+  // Add sort_order column to forums if it doesn't exist
+  const forumColumns = db.prepare("PRAGMA table_info(forums)").all().map(c => c.name);
+  if (!forumColumns.includes('sort_order')) {
+    console.log('  - Adding sort_order column to forums');
+    db.exec('ALTER TABLE forums ADD COLUMN sort_order INTEGER DEFAULT 0');
+    // Back-fill sort_order from existing id
+    db.exec('UPDATE forums SET sort_order = id WHERE sort_order = 0 OR sort_order IS NULL');
+  }
+
   console.log('Database initialization complete!');
   console.log('');
   console.log('Default sysop credentials:');

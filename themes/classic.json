@@ -1,0 +1,21 @@
+{
+  "name": "Classic BBS",
+  "author": "Sysop",
+  "colors": {
+    "header":     { "fg": "blue",    "bright": true },
+    "menuBorder": { "fg": "blue",    "bright": true },
+    "menuTitle":  { "fg": "white",   "bright": true },
+    "menuItem":   { "fg": "cyan",    "bright": false },
+    "menuKey":    { "fg": "yellow",  "bright": true },
+    "prompt":     { "fg": "white",   "bright": true },
+    "text":       { "fg": "cyan",    "bright": false },
+    "error":      { "fg": "red",     "bright": true },
+    "success":    { "fg": "green",   "bright": true },
+    "info":       { "fg": "white",   "bright": false }
+  },
+  "art": {
+    "welcome": "",
+    "goodbye": "",
+    "login": ""
+  }
+}
