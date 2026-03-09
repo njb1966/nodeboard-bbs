@@ -82,111 +82,27 @@ export class BBSScreen {
     }
   }
 
-  // ---------------------------------------------------------------------------
-  // Part 1: Status Bar System
-  // ---------------------------------------------------------------------------
-
   /**
-   * Set the context used by status bars.
-   * Call after login when connection properties are known.
-   * @param {{ bbsName: string, nodeNumber: number, username: string, activity: string }} ctx
+   * Set the context (kept for API compatibility, no-op now).
    */
   setContext(ctx) {
     this._context = ctx;
   }
 
   /**
-   * Draw the top status bar (row 1).
-   * Format: " BBS Name          Node: N  User: username "
-   * Blue background with bright white/yellow text.
-   */
-  statusBarTop(bbsName, nodeNumber, username) {
-    const save = '\x1b[s';
-    const restore = '\x1b[u';
-
-    const left = ' ' + bbsName;
-    const right = 'Node: ' + nodeNumber + '  User: ' + username + ' ';
-    const gap = this.width - left.length - right.length;
-    const bar = left + (gap > 0 ? ' '.repeat(gap) : '  ') + right;
-
-    this.write(save);
-    this.write(cursorTo(1, 1));
-    this.write(ANSI.BG_BLUE + ANSI.FG_WHITE + ANSI.BRIGHT);
-    this.write(padText(bar, this.width));
-    this.write(ANSI.RESET);
-    this.write(restore);
-  }
-
-  /**
-   * Draw the bottom status bar (row 24).
-   * Format: " [Activity]          HH:MM PM  [?]=Help "
-   * Blue background with bright white/yellow text.
-   */
-  statusBarBottom(area, extraInfo) {
-    const save = '\x1b[s';
-    const restore = '\x1b[u';
-
-    const now = new Date();
-    let hours = now.getHours();
-    const ampm = hours >= 12 ? 'PM' : 'AM';
-    hours = hours % 12 || 12;
-    const minutes = String(now.getMinutes()).padStart(2, '0');
-    const timeStr = hours + ':' + minutes + ' ' + ampm;
-
-    const left = ' [' + (area || 'Main Menu') + ']';
-    const right = (extraInfo ? extraInfo + '  ' : '') + timeStr + '  [?]=Help ';
-    const gap = this.width - left.length - right.length;
-    const bar = left + (gap > 0 ? ' '.repeat(gap) : '  ') + right;
-
-    this.write(save);
-    this.write(cursorTo(this.height, 1));
-    this.write(ANSI.BG_BLUE + ANSI.FG_YELLOW + ANSI.BRIGHT);
-    this.write(padText(bar, this.width));
-    this.write(ANSI.RESET);
-    this.write(restore);
-  }
-
-  /**
-   * Redraw both status bars using stored context.
-   * Safe to call even if context is not yet set.
-   */
-  redrawStatusBars() {
-    if (!this._context) return;
-    const ctx = this._context;
-    this.statusBarTop(ctx.bbsName, ctx.nodeNumber, ctx.username);
-    this.statusBarBottom(ctx.activity);
-  }
-
-  /**
-   * Update just the activity shown on the bottom status bar.
-   * @param {string} activity
+   * Update activity (kept for API compatibility, no-op now).
    */
   updateActivity(activity) {
     if (this._context) {
       this._context.activity = activity;
     }
-    this.redrawStatusBars();
   }
 
   /**
-   * Clear the entire screen and redraw status bars.
+   * Clear screen.
    */
   clear() {
     this.write(ANSI.CLEAR_SCREEN);
-    this.redrawStatusBars();
-  }
-
-  /**
-   * Clear only the content area (rows 2-23) between status bars.
-   * Leaves row 1 (top bar) and row 24 (bottom bar) intact.
-   */
-  clearContent() {
-    for (let row = 2; row <= this.height - 1; row++) {
-      this.write(cursorTo(row, 1));
-      this.write(ANSI.CLEAR_LINE);
-    }
-    // Position cursor at top of content area
-    this.write(cursorTo(2, 1));
   }
 
   // ---------------------------------------------------------------------------
@@ -297,11 +213,7 @@ export class BBSScreen {
    * Display menu with section banner, improved item formatting, and theme colors.
    */
   menu(title, items, prompt = 'Selection') {
-    if (this._context) {
-      this.clearContent();
-    } else {
-      this.clear();
-    }
+    this.clear();
 
     // Load theme colours (safe fallback if theme service not ready)
     let tc;
