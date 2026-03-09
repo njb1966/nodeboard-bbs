@@ -50,7 +50,7 @@
 ║                  <span class="text-yellow">▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀</span>                  ║
 ║                                                                           ║
 ║                         <span class="text-green">NODEBOARD BBS SYSTEM</span>                               ║
-║                            <span class="text-white">Version 1.1</span>                                      ║
+║                            <span class="text-white">Version 2.0</span>                                      ║
 ║                                                                           ║
 ╚═══════════════════════════════════════════════════════════════════════════╝
             </pre>
@@ -81,7 +81,7 @@
                 <span class="text-cyan">╔═════════════════╗</span><br>
                 <span class="text-cyan">║</span> <span class="text-yellow">System Info</span>     <span class="text-cyan">║</span><br>
                 <span class="text-cyan">╠═════════════════╣</span><br>
-                <span class="text-cyan">║</span> <span class="text-white">Version:</span> <span class="text-green">1.1</span>   <span class="text-cyan">║</span><br>
+                <span class="text-cyan">║</span> <span class="text-white">Version:</span> <span class="text-green">2.0</span>   <span class="text-cyan">║</span><br>
                 <span class="text-cyan">║</span> <span class="text-white">Status:</span> <span class="text-green">Online</span> <span class="text-cyan">║</span><br>
                 <span class="text-cyan">╚═════════════════╝</span>
               </div>
@@ -107,21 +107,22 @@
             <div class="connect-methods">
               <div class="connect-box">
                 <h3 class="text-green">╔════════════════════════════════════════╗</h3>
-                <h3 class="text-green">║ Method 1: Traditional Telnet Client    ║</h3>
+                <h3 class="text-green">║ Method 1: Telnet or SSH Client         ║</h3>
                 <h3 class="text-green">╚════════════════════════════════════════╝</h3>
 
-                <p class="text-white">Use any telnet client to connect:</p>
+                <p class="text-white">Connect via telnet or SSH:</p>
 
                 <div class="code-box">
-                  <span class="text-cyan">$ telnet <span id="telnet-host">localhost</span> <span id="telnet-port">2323</span></span>
+                  <span class="text-cyan">$ telnet <span id="telnet-host">localhost</span> <span id="telnet-port">2323</span></span><br>
+                  <span class="text-cyan">$ ssh -p 2222 user@localhost</span>
                 </div>
 
                 <h4 class="text-yellow">Recommended Clients:</h4>
                 <ul class="client-list">
-                  <li><span class="text-white">• <span class="text-green">SyncTERM</span> - Modern BBS terminal</span></li>
+                  <li><span class="text-white">• <span class="text-green">SyncTERM</span> - Modern BBS terminal (CP437)</span></li>
                   <li><span class="text-white">• <span class="text-green">PuTTY</span> - Windows telnet/SSH client</span></li>
                   <li><span class="text-white">• <span class="text-green">NetRunner</span> - Classic BBS client</span></li>
-                  <li><span class="text-white">• <span class="text-green">Terminal</span> - Built-in on Mac/Linux</span></li>
+                  <li><span class="text-white">• <span class="text-green">Terminal</span> - Built-in on Mac/Linux (SSH)</span></li>
                 </ul>
               </div>
 
@@ -153,79 +154,80 @@
             <div class="features-grid">
               <div class="feature-box">
                 <h3 class="text-green">╔═══════════════════════════╗</h3>
-                <h3 class="text-green">║ 📬 Communication          ║</h3>
+                <h3 class="text-green">║ Communication             ║</h3>
                 <h3 class="text-green">╚═══════════════════════════╝</h3>
                 <ul class="feature-list">
-                  <li><span class="text-cyan">•</span> <span class="text-white">Message Forums</span></li>
-                  <li><span class="text-cyan">•</span> <span class="text-white">Threaded Discussions</span></li>
+                  <li><span class="text-cyan">•</span> <span class="text-white">Message Forums + Quoting</span></li>
                   <li><span class="text-cyan">•</span> <span class="text-white">Private Messaging</span></li>
-                  <li><span class="text-cyan">•</span> <span class="text-white">System Bulletins</span></li>
-                  <li><span class="text-cyan">•</span> <span class="text-white">Who's Online</span></li>
+                  <li><span class="text-cyan">•</span> <span class="text-white">Real-time Chat Rooms</span></li>
+                  <li><span class="text-cyan">•</span> <span class="text-white">Node-to-Node Paging</span></li>
+                  <li><span class="text-cyan">•</span> <span class="text-white">OneLiners / Graffiti Wall</span></li>
+                  <li><span class="text-cyan">•</span> <span class="text-white">Voting / Polls</span></li>
                 </ul>
               </div>
 
               <div class="feature-box">
                 <h3 class="text-green">╔═══════════════════════════╗</h3>
-                <h3 class="text-green">║ 📁 File Areas             ║</h3>
+                <h3 class="text-green">║ File System               ║</h3>
                 <h3 class="text-green">╚═══════════════════════════╝</h3>
                 <ul class="feature-list">
-                  <li><span class="text-cyan">•</span> <span class="text-white">File Upload/Download</span></li>
-                  <li><span class="text-cyan">•</span> <span class="text-white">Multiple Categories</span></li>
-                  <li><span class="text-cyan">•</span> <span class="text-white">File Descriptions</span></li>
-                  <li><span class="text-cyan">•</span> <span class="text-white">Download Tracking</span></li>
-                  <li><span class="text-cyan">•</span> <span class="text-white">Upload Credits</span></li>
+                  <li><span class="text-cyan">•</span> <span class="text-white">ZMODEM Transfers</span></li>
+                  <li><span class="text-cyan">•</span> <span class="text-white">HTTP Download Links</span></li>
+                  <li><span class="text-cyan">•</span> <span class="text-white">FILE_ID.DIZ Extraction</span></li>
+                  <li><span class="text-cyan">•</span> <span class="text-white">Download/Upload Ratios</span></li>
+                  <li><span class="text-cyan">•</span> <span class="text-white">New Files Scan</span></li>
                 </ul>
               </div>
 
               <div class="feature-box">
                 <h3 class="text-green">╔═══════════════════════════╗</h3>
-                <h3 class="text-green">║ 🎮 Entertainment          ║</h3>
+                <h3 class="text-green">║ Entertainment             ║</h3>
                 <h3 class="text-green">╚═══════════════════════════╝</h3>
                 <ul class="feature-list">
-                  <li><span class="text-cyan">•</span> <span class="text-white">DOOR Games</span></li>
-                  <li><span class="text-cyan">•</span> <span class="text-white">TradeWars Support</span></li>
-                  <li><span class="text-cyan">•</span> <span class="text-white">Legend of the Red Dragon</span></li>
-                  <li><span class="text-cyan">•</span> <span class="text-white">Game Statistics</span></li>
-                  <li><span class="text-cyan">•</span> <span class="text-white">Leaderboards</span></li>
+                  <li><span class="text-cyan">•</span> <span class="text-white">DOOR Games + DOOR32.SYS</span></li>
+                  <li><span class="text-cyan">•</span> <span class="text-white">Built-in Trivia/Hangman</span></li>
+                  <li><span class="text-cyan">•</span> <span class="text-white">Top-10 Leaderboards</span></li>
+                  <li><span class="text-cyan">•</span> <span class="text-white">18 User Achievements</span></li>
+                  <li><span class="text-cyan">•</span> <span class="text-white">RSS Feed Reader</span></li>
                 </ul>
               </div>
 
               <div class="feature-box">
                 <h3 class="text-green">╔═══════════════════════════╗</h3>
-                <h3 class="text-green">║ 👥 User System            ║</h3>
+                <h3 class="text-green">║ Access Methods            ║</h3>
                 <h3 class="text-green">╚═══════════════════════════╝</h3>
                 <ul class="feature-list">
-                  <li><span class="text-cyan">•</span> <span class="text-white">User Profiles</span></li>
-                  <li><span class="text-cyan">•</span> <span class="text-white">User Statistics</span></li>
-                  <li><span class="text-cyan">•</span> <span class="text-white">Security Levels</span></li>
-                  <li><span class="text-cyan">•</span> <span class="text-white">Time Tracking</span></li>
-                  <li><span class="text-cyan">•</span> <span class="text-white">User List Directory</span></li>
+                  <li><span class="text-cyan">•</span> <span class="text-white">Telnet (CP437 support)</span></li>
+                  <li><span class="text-cyan">•</span> <span class="text-white">SSH (encrypted)</span></li>
+                  <li><span class="text-cyan">•</span> <span class="text-white">Web Terminal (xterm.js)</span></li>
+                  <li><span class="text-cyan">•</span> <span class="text-white">ANSI Art + Themes</span></li>
+                  <li><span class="text-cyan">•</span> <span class="text-white">Config-driven Menus</span></li>
                 </ul>
               </div>
 
               <div class="feature-box">
                 <h3 class="text-green">╔═══════════════════════════╗</h3>
-                <h3 class="text-green">║ 🎨 Classic BBS Style      ║</h3>
+                <h3 class="text-green">║ Security                  ║</h3>
                 <h3 class="text-green">╚═══════════════════════════╝</h3>
                 <ul class="feature-list">
-                  <li><span class="text-cyan">•</span> <span class="text-white">Full ANSI Graphics</span></li>
-                  <li><span class="text-cyan">•</span> <span class="text-white">CP437 Character Set</span></li>
-                  <li><span class="text-cyan">•</span> <span class="text-white">ASCII Art Support</span></li>
-                  <li><span class="text-cyan">•</span> <span class="text-white">Retro Interface</span></li>
-                  <li><span class="text-cyan">•</span> <span class="text-white">Color Customization</span></li>
+                  <li><span class="text-cyan">•</span> <span class="text-white">bcrypt Password Hashing</span></li>
+                  <li><span class="text-cyan">•</span> <span class="text-white">Rate Limiting / Lockout</span></li>
+                  <li><span class="text-cyan">•</span> <span class="text-white">IP Ban Management</span></li>
+                  <li><span class="text-cyan">•</span> <span class="text-white">Session Limits</span></li>
+                  <li><span class="text-cyan">•</span> <span class="text-white">Security Levels (1-99)</span></li>
                 </ul>
               </div>
 
               <div class="feature-box">
                 <h3 class="text-green">╔═══════════════════════════╗</h3>
-                <h3 class="text-green">║ ⚙️ Administration         ║</h3>
+                <h3 class="text-green">║ Administration            ║</h3>
                 <h3 class="text-green">╚═══════════════════════════╝</h3>
                 <ul class="feature-list">
-                  <li><span class="text-cyan">•</span> <span class="text-white">Sysop Admin Panel</span></li>
-                  <li><span class="text-cyan">•</span> <span class="text-white">User Management</span></li>
-                  <li><span class="text-cyan">•</span> <span class="text-white">System Statistics</span></li>
-                  <li><span class="text-cyan">•</span> <span class="text-white">Log Viewer</span></li>
-                  <li><span class="text-cyan">•</span> <span class="text-white">Session Monitoring</span></li>
+                  <li><span class="text-cyan">•</span> <span class="text-white">Full CRUD Admin Panel</span></li>
+                  <li><span class="text-cyan">•</span> <span class="text-white">Event Scheduler</span></li>
+                  <li><span class="text-cyan">•</span> <span class="text-white">Structured Audit Logs</span></li>
+                  <li><span class="text-cyan">•</span> <span class="text-white">Inter-BBS Networking</span></li>
+                  <li><span class="text-cyan">•</span> <span class="text-white">Theme/Skin System</span></li>
                 </ul>
               </div>
             </div>
@@ -235,11 +237,12 @@
               <h3 class="text-yellow">║ Technology Stack                            ║</h3>
               <h3 class="text-yellow">╚═════════════════════════════════════════════╝</h3>
               <p class="text-white">
-                <span class="text-cyan">Backend:</span> Node.js with ES Modules<br>
-                <span class="text-cyan">Database:</span> SQLite3<br>
-                <span class="text-cyan">Protocol:</span> Telnet (RFC 854)<br>
-                <span class="text-cyan">Graphics:</span> ANSI/VT100 Terminal Graphics<br>
-                <span class="text-cyan">Web:</span> Express + WebSocket
+                <span class="text-cyan">Backend:</span> Node.js 18+ (ES Modules)<br>
+                <span class="text-cyan">Database:</span> SQLite3 (23 tables)<br>
+                <span class="text-cyan">Protocols:</span> Telnet, SSH (ssh2), WebSocket<br>
+                <span class="text-cyan">Graphics:</span> ANSI/VT100 + CP437 + xterm.js<br>
+                <span class="text-cyan">Web:</span> Express + xterm.js Terminal<br>
+                <span class="text-cyan">Auth:</span> bcrypt + rate limiting + IP bans
               </p>
             </div>
           </div>
@@ -290,8 +293,8 @@
       <!-- Footer -->
       <div class="terminal-footer">
         <p class="text-cyan">
-          NodeBoard BBS v1.1 | A modern tribute to 1990s BBS culture |
-          Inspired by classic 1990s BBS systems, built with Node.js
+          NodeBoard BBS v2.0 | A modern tribute to 1990s BBS culture |
+          Telnet, SSH, and Web Terminal access | Built with Node.js
         </p>
       </div>
     </div>
