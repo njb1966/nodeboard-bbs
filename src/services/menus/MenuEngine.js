@@ -6,6 +6,9 @@
  * filters items by security level, and dispatches actions through a registry.
  */
 import { colorText } from '../../utils/ansi.js';
+import { loadArt, applyAtCodes } from '../../utils/artloader.js';
+import config from '../../config/index.js';
+import { getDatabase } from '../../database/db.js';
 
 /**
  * Badge resolver functions.
@@ -35,6 +38,9 @@ export class MenuEngine {
 
     /** @type {object} */
     this.badgeResolvers = { ...defaultBadgeResolvers };
+
+    /** Extra context fields merged in when applying @codes to art files */
+    this.atCodeContext = {};
   }
 
   /**
@@ -53,6 +59,48 @@ export class MenuEngine {
    */
   registerBadge(name, resolver) {
     this.badgeResolvers[name] = resolver;
+  }
+
+  /**
+   * Provide additional @code context for art file substitution.
+   * Commonly used to set `areas` for @AREAS@ substitution.
+   * @param {object} ctx - Key/value pairs merged into the @code context
+   */
+  setAtCodeContext(ctx) {
+    this.atCodeContext = { ...this.atCodeContext, ...ctx };
+  }
+
+  /**
+   * Fetch formatted area lines for @AREAS@ substitution based on menuDef.areasType.
+   * Returns an empty array if areasType is not set.
+   * @returns {string[]}
+   */
+  _buildAreasLines() {
+    const areasType = this.menuDef.areasType;
+    if (!areasType) return [];
+
+    const db = getDatabase();
+    const userLevel = this.user?.security_level || 0;
+
+    if (areasType === 'forums') {
+      const forums = db.prepare(
+        'SELECT id, name, description, post_count FROM forums WHERE security_level <= ? ORDER BY sort_order, id'
+      ).all(userLevel);
+      return forums.map(f =>
+        `  ${String(f.id).padStart(2)}. ${f.name.padEnd(24)} ${f.description || ''}`
+      );
+    }
+
+    if (areasType === 'files') {
+      const areas = db.prepare(
+        'SELECT id, name, description, file_count FROM file_areas WHERE security_level <= ? ORDER BY id'
+      ).all(userLevel);
+      return areas.map(a =>
+        `  ${String(a.id).padStart(2)}. ${a.name.padEnd(24)} ${a.description || ''}`
+      );
+    }
+
+    return [];
   }
 
   /**
@@ -129,11 +177,39 @@ export class MenuEngine {
 
       const items = this.buildMenuItems();
 
-      this.screen.menu(
-        this.menuDef.title,
-        items,
-        this.menuDef.prompt || 'Selection',
-      );
+      // If the menu definition has an art file, display it instead of the
+      // code-rendered menu. Fall back to code rendering if the file is missing.
+      let artDisplayed = false;
+      if (this.menuDef.art) {
+        try {
+          const { content } = await loadArt(this.menuDef.art);
+          const autoAreas = this._buildAreasLines();
+          const context = {
+            username: this.user?.username || 'Guest',
+            node: this.connection.nodeNumber ?? '?',
+            bbsName: config.bbs.name,
+            ...(autoAreas.length > 0 ? { areas: autoAreas } : {}),
+            ...this.atCodeContext,
+          };
+          const processed = applyAtCodes(content, context);
+          this.screen.clear();
+          this.screen.write(processed);
+          artDisplayed = true;
+        } catch (_) {
+          // Art file not found — fall through to code-rendered menu
+        }
+      }
+
+      if (!artDisplayed) {
+        this.screen.menu(
+          this.menuDef.title,
+          items,
+          this.menuDef.prompt || 'Selection',
+        );
+      } else {
+        // Art-based menu: just show the prompt line
+        this.screen.write('\r\n' + colorText(`${this.menuDef.prompt || 'Command'}: `, 'yellow', null, true));
+      }
 
       const choice = (await this.connection.getInput()).toUpperCase();
 

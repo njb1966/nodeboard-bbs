@@ -7,8 +7,9 @@
  */
 import getDatabase from '../database/db.js';
 import { colorText, BOX, padText } from '../utils/ansi.js';
+import { loadArt, applyAtCodes } from '../utils/artloader.js';
 import config from '../config/index.js';
-import { existsSync, statSync, mkdirSync, readdirSync } from 'fs';
+import { existsSync, statSync, mkdirSync, readdirSync, unlinkSync, renameSync } from 'fs';
 import { join, basename, extname } from 'path';
 import { spawn, execFileSync } from 'child_process';
 import { generateDownloadToken } from './DownloadTokenService.js';
@@ -35,15 +36,46 @@ export class FileService {
         ORDER BY id
       `).all(this.user.security_level);
 
-      const menuItems = areas.map((area, idx) => ({
-        key: (idx + 1).toString(),
-        text: `${area.name} (${area.file_count} files)`,
-      }));
+      // Try to display files.ans with @AREAS@ substitution; fall back to code-rendered menu
+      let artDisplayed = false;
+      try {
+        const { content } = await loadArt('files.ans');
+        // @AREAS@ sits after ESC[22C in the art, so line 1 starts at col 22.
+        // Lines 2+ must be prefixed with 22 spaces to stay aligned.
+        // Keep content ≤ 56 chars so nothing wraps past col 80.
+        const indent = ' '.repeat(13);
+        const areaLines = areas.map((area, idx) => {
+          const num = String(idx + 1).padStart(2);
+          const name = area.name.substring(0, 16).padEnd(16);
+          const desc = (area.description || '').substring(0, 22).padEnd(22);
+          const count = `(${area.file_count} files)`;
+          const line = `${num}. ${name}  ${desc}  ${count}`;
+          return idx === 0 ? line : `${indent}${line}`;
+        });
+        areaLines.push('');
+        areaLines.push(`${indent}\x1b[1;33mN\x1b[0;36m. New Files Scan\x1b[0m`);
+        areaLines.push(`${indent}\x1b[1;33mQ\x1b[0;36m. Return to Main Menu\x1b[0m`);
+        const processed = applyAtCodes(content, {
+          username: this.user.username,
+          node: this.connection.nodeNumber ?? '?',
+          bbsName: config.bbs.name,
+          areas: areaLines,
+        });
+        this.screen.clear();
+        this.connection.write(processed);
+        this.connection.write('\r\n' + colorText('Area: ', 'yellow', null, true));
+        artDisplayed = true;
+      } catch (err) { console.error('[FileService] art render error:', err); }
 
-      menuItems.push({ key: 'N', text: 'New Files Scan' });
-      menuItems.push({ key: 'Q', text: 'Return to Main Menu' });
-
-      this.screen.menu('FILE AREAS', menuItems, 'Area');
+      if (!artDisplayed) {
+        const menuItems = areas.map((area, idx) => ({
+          key: (idx + 1).toString(),
+          text: `${area.name} (${area.file_count} files)`,
+        }));
+        menuItems.push({ key: 'N', text: 'New Files Scan' });
+        menuItems.push({ key: 'Q', text: 'Return to Main Menu' });
+        this.screen.menu('FILE AREAS', menuItems, 'Area');
+      }
 
       const choice = (await this.connection.getInput()).toUpperCase();
 
@@ -116,9 +148,14 @@ export class FileService {
 
       this.connection.write('\r\n');
 
+      const isSysop = this.user.security_level >= 90;
+      const canUpload = config.features.allowUploads &&
+        (isSysop || area.allow_uploads);
+
       let prompt = '[V]iew  ';
       if (config.features.allowDownloads) prompt += '[D]ownload  ';
-      if (config.features.allowUploads) prompt += '[U]pload  ';
+      if (canUpload) prompt += '[U]pload  ';
+      if (isSysop && files.length > 0) prompt += '[R]emove  [M]ove  ';
       prompt += '[Q]uit: ';
 
       this.connection.write(colorText(prompt, 'yellow', null, true));
@@ -139,8 +176,20 @@ export class FileService {
         if (idx >= 0 && idx < files.length) {
           await this.downloadFile(files[idx], area);
         }
-      } else if (choice === 'U' && config.features.allowUploads) {
+      } else if (choice === 'U' && canUpload) {
         await this.uploadFile(area);
+      } else if (choice === 'R' && isSysop && files.length > 0) {
+        const fileNum = await this.connection.getInput('File number to remove: ');
+        const idx = parseInt(fileNum) - 1;
+        if (idx >= 0 && idx < files.length) {
+          await this.removeFile(files[idx], area);
+        }
+      } else if (choice === 'M' && isSysop && files.length > 0) {
+        const fileNum = await this.connection.getInput('File number to move: ');
+        const idx = parseInt(fileNum) - 1;
+        if (idx >= 0 && idx < files.length) {
+          await this.moveFile(files[idx], area);
+        }
       }
     }
   }
@@ -165,6 +214,80 @@ export class FileService {
     await this.connection.getChar();
   }
 
+  // ───────────────────────── Sysop File Management ─────────────────────────
+
+  async removeFile(file, area) {
+    this.connection.write('\r\n');
+    this.connection.write(colorText(`Remove: ${file.original_name} — are you sure? (Y/N): `, 'yellow', null, true));
+    const confirm = (await this.connection.getInput()).toUpperCase();
+    if (confirm !== 'Y') {
+      this.connection.write(colorText('  Cancelled.\r\n', 'white'));
+      return;
+    }
+
+    const filePath = join(config.paths.root, 'data', 'downloads', area.path, file.filename);
+    const db = getDatabase();
+
+    try {
+      if (existsSync(filePath)) unlinkSync(filePath);
+      db.prepare('DELETE FROM files WHERE id = ?').run(file.id);
+      db.prepare('UPDATE file_areas SET file_count = MAX(0, file_count - 1) WHERE id = ?').run(area.id);
+      logEvent('FILE', this.user.id, this.user.username, `Deleted file: ${file.original_name}`, this.connection.remoteAddress);
+      this.connection.write(colorText(`  ${file.original_name} deleted.\r\n`, 'green', null, true));
+    } catch (err) {
+      this.connection.write(colorText(`  Error: ${err.message}\r\n`, 'red', null, true));
+    }
+
+    await this.connection.getChar();
+  }
+
+  async moveFile(file, fromArea) {
+    const db = getDatabase();
+    const areas = db.prepare('SELECT * FROM file_areas WHERE id != ? ORDER BY name').all(fromArea.id);
+
+    this.screen.clear();
+    this.connection.write('\r\n');
+    this.connection.write(colorText(`  Move: ${file.original_name}\r\n`, 'yellow', null, true));
+    this.connection.write(colorText('  ' + BOX.D_HORIZONTAL.repeat(55), 'cyan', null, true) + '\r\n\r\n');
+
+    areas.forEach((a, i) => {
+      this.connection.write(
+        colorText(`  [${i + 1}] `, 'green', null, true) +
+        colorText(a.name, 'white') + '\r\n'
+      );
+    });
+
+    this.connection.write('\r\n');
+    const choice = await this.connection.getInput('  Destination area (or ENTER to cancel): ');
+    if (!choice) return;
+
+    const idx = parseInt(choice) - 1;
+    if (idx < 0 || idx >= areas.length) {
+      this.connection.write(colorText('  Invalid selection.\r\n', 'red'));
+      await this.connection.getChar();
+      return;
+    }
+
+    const toArea = areas[idx];
+    const fromPath = join(config.paths.root, 'data', 'downloads', fromArea.path, file.filename);
+    const toDir   = join(config.paths.root, 'data', 'downloads', toArea.path);
+    const toPath  = join(toDir, file.filename);
+
+    try {
+      if (!existsSync(toDir)) mkdirSync(toDir, { recursive: true });
+      renameSync(fromPath, toPath);
+      db.prepare('UPDATE files SET area_id = ? WHERE id = ?').run(toArea.id, file.id);
+      db.prepare('UPDATE file_areas SET file_count = MAX(0, file_count - 1) WHERE id = ?').run(fromArea.id);
+      db.prepare('UPDATE file_areas SET file_count = file_count + 1 WHERE id = ?').run(toArea.id);
+      logEvent('FILE', this.user.id, this.user.username, `Moved ${file.original_name} → ${toArea.name}`, this.connection.remoteAddress);
+      this.connection.write(colorText(`\r\n  Moved to ${toArea.name}.\r\n`, 'green', null, true));
+    } catch (err) {
+      this.connection.write(colorText(`  Error: ${err.message}\r\n`, 'red', null, true));
+    }
+
+    await this.connection.getChar();
+  }
+
   // ───────────────────────────── Downloads ─────────────────────────────
 
   /**
@@ -178,8 +301,9 @@ export class FileService {
       return;
     }
 
-    // Resolve the file path on disk
-    const areaPath = join(config.paths.downloads, area.path);
+    // Resolve the file path on disk — use config.paths.root to guarantee an
+    // absolute path so sz/rz receive a valid location regardless of CWD.
+    const areaPath = join(config.paths.root, 'data', 'downloads', area.path);
     const filePath = join(areaPath, file.filename);
 
     if (!existsSync(filePath)) {
@@ -243,7 +367,7 @@ export class FileService {
     this.connection.write(colorText(`Sending: ${file.original_name} (${this.formatFileSize(file.file_size)})`, 'white') + '\r\n\r\n');
 
     try {
-      await this._spawnZmodem('sz', [filePath]);
+      await this._spawnZmodem('sz', ['-y', filePath]);
       this._recordDownload(file);
       this.connection.write('\r\n');
       this.connection.write(colorText('Transfer complete!', 'green', null, true) + '\r\n');
@@ -288,8 +412,8 @@ export class FileService {
     this.connection.write('\r\n');
     const description = await this.connection.getInput('File description (or ENTER for none): ');
 
-    // Ensure the area directory exists
-    const areaPath = join(config.paths.downloads, area.path);
+    // Ensure the area directory exists — absolute path required for rz
+    const areaPath = join(config.paths.root, 'data', 'downloads', area.path);
     if (!existsSync(areaPath)) {
       mkdirSync(areaPath, { recursive: true });
     }
@@ -301,7 +425,7 @@ export class FileService {
     const beforeFiles = new Set(existsSync(areaPath) ? readdirSync(areaPath) : []);
 
     try {
-      await this._spawnZmodem('rz', ['-e'], areaPath);
+      await this._spawnZmodem('rz', ['-b'], areaPath);
 
       // Detect newly uploaded file(s) by diffing directory
       const afterFiles = readdirSync(areaPath);
@@ -401,28 +525,115 @@ export class FileService {
 
       const socket = this.connection.socket;
 
-      // Pipe child stdout -> user socket (ZMODEM data to terminal)
+      // Suspend the connection's normal data handler so it doesn't echo or
+      // interpret binary ZMODEM packets as BBS input, which corrupts the stream.
+      this.connection.rawMode = true;
+
+      // Pipe child stdout -> user socket (ZMODEM protocol frames to terminal).
+      // rz sends raw XON (0x11) / XOFF (0x13) flow control bytes on stdout as
+      // part of the ZMODEM protocol. On a serial/modem link these are absorbed
+      // by the line driver; on a direct TCP socket they reach the sender as
+      // unexpected out-of-band bytes, corrupting the data stream and causing
+      // CRC failures. Strip them before forwarding — all ZMODEM control frames
+      // sent by rz (ZRINIT, ZRPOS, ZACK, ZFIN) are HEX-encoded ASCII and
+      // never legitimately contain 0x11 or 0x13.
       child.stdout.on('data', (data) => {
         try {
-          socket.write(data);
+          let out = data;
+          if (data.includes(0x11) || data.includes(0x13)) {
+            const bytes = [];
+            for (let i = 0; i < data.length; i++) {
+              if (data[i] !== 0x11 && data[i] !== 0x13) bytes.push(data[i]);
+            }
+            out = Buffer.from(bytes);
+          }
+          // For Telnet, re-escape any 0xFF bytes in rz's output so
+          // SyncTERM's Telnet parser doesn't treat them as IAC commands.
+          if (this.connection.protocol === 'telnet' && out.includes(0xFF)) {
+            const escaped = [];
+            for (let i = 0; i < out.length; i++) {
+              escaped.push(out[i]);
+              if (out[i] === 0xFF) escaped.push(0xFF);
+            }
+            out = Buffer.from(escaped);
+          }
+          if (out.length > 0) socket.write(out);
         } catch {
           // Socket may have closed
         }
       });
 
-      // Pipe child stderr -> user socket (progress/status)
+      // Log stderr server-side only — do NOT send to socket during binary transfer
+      // as it pollutes the ZMODEM binary stream and confuses the client parser.
       child.stderr.on('data', (data) => {
-        try {
-          socket.write(data);
-        } catch {
-          // Socket may have closed
-        }
+        process.stderr.write(`[${cmd}] ${data}`);
       });
 
-      // Pipe user socket -> child stdin (ZMODEM data from terminal)
+      // Pipe raw socket data -> child stdin.
+      // For Telnet connections SyncTERM escapes 0xFF as 0xFF 0xFF (IAC IAC).
+      // We must un-escape before handing data to rz or rz sees doubled 0xFF
+      // bytes in ZMODEM binary frames and fails every CRC check.
+      //
+      // IMPORTANT: 0xFF 0xFF pairs can be split across TCP chunks. We carry
+      // an incomplete leading 0xFF forward into the next chunk to handle this.
+      let iacCarry = false; // true when last byte of previous chunk was 0xFF
+
+      const unescapeTelnet = (buf) => {
+        const out = [];
+        let i = 0;
+
+        // Resume from a 0xFF carried over from the previous chunk
+        if (iacCarry) {
+          iacCarry = false;
+          if (buf.length > 0) {
+            const next = buf[0];
+            if (next === 0xFF) {
+              out.push(0xFF); // 0xFF 0xFF → literal 0xFF
+            } else if (next >= 251 && next <= 254) {
+              i = 2; // IAC WILL/WONT/DO/DONT + option — skip
+            } else if (next === 250) {
+              // IAC SB ... IAC SE
+              i = 2;
+              while (i < buf.length && buf[i] !== 240) i++;
+              i++;
+            }
+            // else: unknown IAC — skip the pair
+            if (i === 0) i = 1; // consumed the carry + next byte
+          }
+        }
+
+        for (; i < buf.length; i++) {
+          if (buf[i] !== 0xFF) {
+            out.push(buf[i]);
+            continue;
+          }
+          // buf[i] === 0xFF
+          if (i + 1 >= buf.length) {
+            iacCarry = true; // split pair — hold and wait for next chunk
+            break;
+          }
+          const next = buf[i + 1];
+          if (next === 0xFF) {
+            out.push(0xFF); // IAC IAC → literal 0xFF
+            i++;
+          } else if (next >= 251 && next <= 254) {
+            i += 2; // IAC WILL/WONT/DO/DONT + option
+          } else if (next === 250) {
+            i += 2;
+            while (i < buf.length && buf[i] !== 240) i++;
+          } else {
+            i++; // unknown IAC command
+          }
+        }
+        return Buffer.from(out);
+      };
+
       const onData = (data) => {
         try {
-          child.stdin.write(data);
+          const input = this.connection.protocol === 'telnet'
+            ? unescapeTelnet(data)
+            : data;
+          if (input.length > 0) child.stdin.write(input);
         } catch {
           // Child may have exited
         }
@@ -430,8 +641,8 @@ export class FileService {
       socket.on('data', onData);
 
       child.on('close', (code) => {
-        // Remove our data listener so normal input handling resumes
         socket.removeListener('data', onData);
+        this.connection.rawMode = false;
 
         if (code === 0) {
           resolve();
@@ -442,6 +653,7 @@ export class FileService {
 
       child.on('error', (err) => {
         socket.removeListener('data', onData);
+        this.connection.rawMode = false;
         reject(err);
       });
     });

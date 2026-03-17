@@ -53,10 +53,19 @@ export class TelnetConnection {
     // Activity tracking
     this.activity = 'Logging in';
 
+    // Echo control: server echoes for all protocols.
+    // Telnet clients that honor IAC WILL ECHO will disable their local echo.
+    // If a client has "local echo" forced on (e.g. SyncTERM default), disable it
+    // in the terminal settings — this is a client-side configuration issue.
+    this.serverEcho = true;
+
     // Chat / paging support
     this.chatPartner = null;
     this.pageQueue = [];
     this.chatMessageHandler = null;
+
+    // Raw mode: when true, handleData is bypassed (e.g. during ZMODEM transfers)
+    this.rawMode = false;
 
     // Telnet negotiation (skip for SSH)
     if (this.protocol === 'telnet') {
@@ -68,16 +77,21 @@ export class TelnetConnection {
   }
 
   /**
-   * Setup telnet options
+   * Setup telnet options.
+   * Send all IAC negotiation in a single write so it arrives as one TCP segment.
+   * Splitting across multiple writes can cause clients (e.g. SyncTERM) to process
+   * them in separate passes and fail to suppress local echo.
    */
   setupTelnet() {
-    // Send telnet options
-    // IAC WILL ECHO - server will echo
-    this.socket.write(Buffer.from([255, 251, 1]));
-    // IAC WILL SUPPRESS_GO_AHEAD
-    this.socket.write(Buffer.from([255, 251, 3]));
-    // IAC DO TERMINAL_TYPE
-    this.socket.write(Buffer.from([255, 253, 24]));
+    // Disable Nagle so the negotiation packet goes out immediately
+    if (this.socket.setNoDelay) this.socket.setNoDelay(true);
+
+    // Single buffer: IAC WILL ECHO, IAC WILL SGA, IAC DO TERMINAL_TYPE
+    this.socket.write(Buffer.from([
+      255, 251, 1,   // IAC WILL ECHO
+      255, 251, 3,   // IAC WILL SUPPRESS_GO_AHEAD
+      255, 253, 24,  // IAC DO TERMINAL_TYPE
+    ]));
   }
 
   /**
@@ -118,6 +132,9 @@ export class TelnetConnection {
    * Handle incoming data
    */
   handleData(data) {
+    // Bypass all processing during raw transfers (e.g. ZMODEM)
+    if (this.rawMode) return;
+
     // Filter out telnet commands (not needed for SSH)
     let filtered;
     if (this.protocol === 'telnet') {
@@ -160,7 +177,9 @@ export class TelnetConnection {
         } else if (char.charCodeAt(0) >= 32 && char.charCodeAt(0) < 127) {
           // Printable character
           this.inputBuffer += char;
-          this.socket.write(char); // Echo
+          if (this.serverEcho) {
+            this.socket.write(char); // Echo only when server is responsible
+          }
         }
       }
     }

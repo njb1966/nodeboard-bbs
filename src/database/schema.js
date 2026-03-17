@@ -78,6 +78,7 @@ export const SCHEMA = {
       description TEXT,
       path TEXT NOT NULL,
       security_level INTEGER DEFAULT 10,
+      allow_uploads INTEGER DEFAULT 0,
       file_count INTEGER DEFAULT 0,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )
@@ -105,8 +106,11 @@ export const SCHEMA = {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL,
       description TEXT,
-      command TEXT NOT NULL,
+      door_type TEXT DEFAULT 'local',
+      command TEXT,
       working_dir TEXT,
+      telnet_host TEXT,
+      telnet_port INTEGER DEFAULT 2323,
       security_level INTEGER DEFAULT 10,
       enabled INTEGER DEFAULT 1,
       times_played INTEGER DEFAULT 0,
@@ -354,10 +358,11 @@ export const DEFAULT_DATA = {
   ],
 
   file_areas: [
-    { name: 'General Files', description: 'General file uploads', path: 'general', security_level: 10 },
-    { name: 'Games', description: 'Game files and patches', path: 'games', security_level: 10 },
-    { name: 'Documents', description: 'Text files and documentation', path: 'docs', security_level: 10 },
-    { name: 'Software', description: 'Applications and utilities', path: 'software', security_level: 10 },
+    { name: 'Uploads', description: 'User upload area — sysop reviews and moves files', path: 'uploads', security_level: 10, allow_uploads: 1 },
+    { name: 'General Files', description: 'General file uploads', path: 'general', security_level: 10, allow_uploads: 0 },
+    { name: 'Games', description: 'Game files and patches', path: 'games', security_level: 10, allow_uploads: 0 },
+    { name: 'Documents', description: 'Text files and documentation', path: 'docs', security_level: 10, allow_uploads: 0 },
+    { name: 'Software', description: 'Applications and utilities', path: 'software', security_level: 10, allow_uploads: 0 },
   ],
 
   bulletins: [

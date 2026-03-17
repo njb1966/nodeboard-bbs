@@ -148,6 +148,7 @@ export class RSSService {
           colorText(timeAgo.padStart(8), 'cyan') +
           '\r\n'
         );
+
       }
 
       this.connection.write('\r\n');
@@ -192,7 +193,7 @@ export class RSSService {
     this.connection.write(colorText('  ' + BOX.HORIZONTAL.repeat(76), 'cyan') + '\r\n\r\n');
 
     // Content / summary
-    const content = article.contentSnippet || article.content || article.summary || 'No content available.';
+    const content = article.content || article.contentSnippet || article.summary || 'No content available.';
     // Strip HTML tags and decode basic entities
     const cleanContent = this.stripHtml(content);
     const wrapped = wordWrap(cleanContent, 74);
@@ -205,10 +206,11 @@ export class RSSService {
 
     this.connection.write('\r\n');
 
-    // URL
+    // URL — OSC 8 hyperlink (clickable in xterm.js and modern terminals)
     if (article.link) {
       this.connection.write(colorText('  ' + BOX.HORIZONTAL.repeat(76), 'cyan') + '\r\n');
-      this.connection.write(colorText('  URL: ', 'white', null, true) + colorText(article.link, 'cyan') + '\r\n');
+      const clickable = `\x1b]8;;${article.link}\x07${article.link}\x1b]8;;\x07`;
+      this.connection.write(colorText('  URL: ', 'white', null, true) + colorText(clickable, 'cyan') + '\r\n');
     }
 
     this.connection.write('\r\n');
@@ -255,6 +257,12 @@ export class RSSService {
       .replace(/&quot;/g, '"')
       .replace(/&#039;/g, "'")
       .replace(/&nbsp;/g, ' ')
+      .replace(/&#(\d+);/g, (_, code) => String.fromCharCode(parseInt(code, 10)))
+      .replace(/&#x([0-9a-f]+);/gi, (_, code) => String.fromCharCode(parseInt(code, 16)))
+      // Strip Reddit submission footer
+      .replace(/submitted by\s+\/u\/\S+/gi, '')
+      .replace(/\[link\]/gi, '')
+      .replace(/\[comments\]/gi, '')
       .replace(/\n{3,}/g, '\n\n')
       .trim();
   }

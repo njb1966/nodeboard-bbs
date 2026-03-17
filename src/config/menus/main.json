@@ -2,7 +2,7 @@
   "id": "main",
   "title": "MAIN MENU",
   "prompt": "Command",
-  "art": "mainmenu.ans",
+  "art": "menu5.ans",
   "items": [
     { "key": "M", "text": "Message Forums", "action": "forums" },
     { "key": "N", "text": "New Message Scan", "action": "newScan" },

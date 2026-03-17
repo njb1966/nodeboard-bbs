@@ -4,6 +4,20 @@ This guide will help you install and run your custom BBS system on Ubuntu 20.04 
 
 ## Prerequisites
 
+### System Packages
+
+**Ubuntu/Debian:**
+```bash
+sudo apt-get install -y lrzsz
+```
+
+**RHEL/Fedora:**
+```bash
+sudo dnf install -y lrzsz
+```
+
+`lrzsz` provides the `sz`/`rz` binaries used for ZMODEM file transfers. Without it, uploads and downloads in the file areas will not work.
+
 ### Node.js
 You need Node.js 18 or higher installed.
 
@@ -277,7 +291,7 @@ sudo iptables -t nat -A PREROUTING -p tcp --dport 23 -j REDIRECT --to-port 2323
 ## Security Recommendations
 
 1. **Change Default Password:**
-   - Login as `sysop` / `sysop`
+   - Login with the sysop account (username set via `BBS_SYSOP` in `.env`, default password: `sysop`)
    - Go to Settings → Change Password
    - Choose a strong password
 

@@ -201,6 +201,46 @@ function cp437BufferToUtf8(buffer) {
 }
 
 /**
+ * Apply @code substitutions to ANSI art content.
+ *
+ * Supported codes:
+ *   @USERNAME@  - logged-in user's username
+ *   @NODE@      - node number
+ *   @TIME@      - current time (HH:MM)
+ *   @DATE@      - current date (YYYY-MM-DD)
+ *   @BBSNAME@   - BBS name from config
+ *   @AREAS@     - newline-separated list of areas (forums, file areas, etc.)
+ *
+ * @param {string} content - Decoded ANSI art string
+ * @param {object} [context]
+ * @param {string} [context.username]
+ * @param {string|number} [context.node]
+ * @param {string} [context.bbsName]
+ * @param {string[]} [context.areas] - Lines to substitute for @AREAS@
+ * @returns {string}
+ */
+export function applyAtCodes(content, context = {}) {
+  const now = new Date();
+  const pad = (n) => String(n).padStart(2, '0');
+
+  const replacements = {
+    '@USERNAME@': context.username || 'Guest',
+    '@NODE@': String(context.node ?? '?'),
+    '@TIME@': `${pad(now.getHours())}:${pad(now.getMinutes())}`,
+    '@DATE@': `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`,
+    '@BBSNAME@': context.bbsName || '',
+    '@AREAS@': Array.isArray(context.areas) ? context.areas.join('\r\n') : '',
+  };
+
+  let result = content;
+  for (const [code, value] of Object.entries(replacements)) {
+    // Use split/join for global replace without regex escaping concerns
+    result = result.split(code).join(value);
+  }
+  return result;
+}
+
+/**
  * Load a single .ans file from the art/ directory.
  *
  * @param {string} filename - File name (e.g. "welcome.ans")
@@ -222,11 +262,13 @@ export async function loadArt(filename) {
  *
  * @param {object} connection - Object with a write() method (socket or BBSScreen)
  * @param {string} filename   - File name (e.g. "welcome.ans")
+ * @param {object} [context]  - @code substitution context (see applyAtCodes)
  * @returns {Promise<{ sauce: object|null }>}
  */
-export async function displayArt(connection, filename) {
+export async function displayArt(connection, filename, context = {}) {
   const { content, sauce } = await loadArt(filename);
-  connection.write(content);
+  const processed = Object.keys(context).length > 0 ? applyAtCodes(content, context) : content;
+  connection.write(processed);
   return { sauce };
 }
 

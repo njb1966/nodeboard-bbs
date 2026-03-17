@@ -84,11 +84,12 @@ export function initializeDatabase() {
   const userCount = db.prepare('SELECT COUNT(*) as count FROM users').get().count;
   if (userCount === 0) {
     console.log('  - Creating default sysop user');
+    const sysopUsername = config.bbs.sysop || 'sysop';
     const hashedPassword = bcrypt.hashSync('sysop', config.security.bcryptRounds);
     db.prepare(`
       INSERT INTO users (username, password, email, real_name, security_level)
       VALUES (?, ?, ?, ?, ?)
-    `).run('sysop', hashedPassword, 'sysop@localhost', 'System Operator', 99);
+    `).run(sysopUsername, hashedPassword, 'sysop@localhost', 'System Operator', 99);
 
     // Insert welcome bulletin with sysop as author
     console.log('  - Inserting welcome bulletin');
@@ -122,10 +123,35 @@ export function initializeDatabase() {
     db.exec('ALTER TABLE messages ADD COLUMN network_id TEXT');
   }
 
+  // Add allow_uploads column to file_areas if it doesn't exist
+  const fileAreaColumns = db.prepare("PRAGMA table_info(file_areas)").all().map(c => c.name);
+  if (!fileAreaColumns.includes('allow_uploads')) {
+    console.log('  - Adding allow_uploads column to file_areas');
+    db.exec('ALTER TABLE file_areas ADD COLUMN allow_uploads INTEGER DEFAULT 0');
+    // Create the Uploads area if it doesn't exist
+    const uploadsExists = db.prepare("SELECT id FROM file_areas WHERE path = 'uploads'").get();
+    if (!uploadsExists) {
+      console.log('  - Creating Uploads area');
+      db.prepare(`
+        INSERT INTO file_areas (name, description, path, security_level, allow_uploads)
+        VALUES ('Uploads', 'User upload area — sysop reviews and moves files', 'uploads', 10, 1)
+      `).run();
+    }
+  }
+
+  // Add door_type, telnet_host, telnet_port columns to doors if they don't exist
+  const doorColumns = db.prepare("PRAGMA table_info(doors)").all().map(c => c.name);
+  if (!doorColumns.includes('door_type')) {
+    console.log('  - Adding door_type, telnet_host, telnet_port columns to doors');
+    db.exec("ALTER TABLE doors ADD COLUMN door_type TEXT DEFAULT 'local'");
+    db.exec('ALTER TABLE doors ADD COLUMN telnet_host TEXT');
+    db.exec('ALTER TABLE doors ADD COLUMN telnet_port INTEGER DEFAULT 2323');
+  }
+
   console.log('Database initialization complete!');
   console.log('');
   console.log('Default sysop credentials:');
-  console.log('  Username: sysop');
+  console.log('  Username: ' + (config.bbs.sysop || 'sysop'));
   console.log('  Password: sysop');
   console.log('  (Please change this password after first login!)');
 

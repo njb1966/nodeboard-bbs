@@ -559,13 +559,17 @@ export class SysopService {
       } else {
         doors.forEach(d => {
           const status = d.enabled ? colorText('[ON] ', 'green') : colorText('[OFF]', 'red');
+          const typeTag = d.door_type === 'telnet'
+            ? colorText('[NET] ', 'magenta', null, true)
+            : colorText('[LOC] ', 'cyan');
+          const detail = d.door_type === 'telnet'
+            ? colorText(`${d.telnet_host}:${d.telnet_port || 2323}`, 'white')
+            : colorText(d.command || '', 'white');
           this.connection.write(
             colorText(`[${d.id}] `, 'cyan', null, true) +
-            status + ' ' +
-            colorText(padText(d.name, 25), 'white') +
-            colorText(`Played: ${String(d.times_played).padEnd(6)}`, 'yellow') +
-            colorText(`Level: ${d.security_level}`, 'green') +
-            '\r\n'
+            status + typeTag +
+            colorText(padText(d.name, 22), 'white', null, true) +
+            detail + '\r\n'
           );
         });
       }
@@ -590,20 +594,36 @@ export class SysopService {
     this.connection.write('\r\n');
     const desc = await this.connection.getInput('Description: ');
     this.connection.write('\r\n');
-    const command = await this.connection.getInput('Command (executable name): ');
-    if (!command) return;
+    const typeStr = await this.connection.getInput('Type (L=Local executable, T=Telnet remote) [L]: ');
     this.connection.write('\r\n');
-    const workDir = await this.connection.getInput('Working directory: ');
-    this.connection.write('\r\n');
+    const doorType = typeStr.toUpperCase() === 'T' ? 'telnet' : 'local';
+
+    let command = '', workDir = null, telnetHost = null, telnetPort = 2323;
+
+    if (doorType === 'telnet') {
+      telnetHost = await this.connection.getInput('Remote host (e.g. bbs.example.com): ');
+      if (!telnetHost) return;
+      this.connection.write('\r\n');
+      const portStr = await this.connection.getInput('Remote port [2323]: ');
+      this.connection.write('\r\n');
+      telnetPort = parseInt(portStr) || 2323;
+    } else {
+      command = await this.connection.getInput('Command (executable name): ');
+      if (!command) return;
+      this.connection.write('\r\n');
+      workDir = await this.connection.getInput('Working directory: ');
+      this.connection.write('\r\n');
+    }
+
     const levelStr = await this.connection.getInput('Security level (default 10): ');
     this.connection.write('\r\n');
     const level = parseInt(levelStr) || 10;
 
     const db = getDatabase();
-    db.prepare('INSERT INTO doors (name, description, command, working_dir, security_level, enabled) VALUES (?, ?, ?, ?, ?, 1)').run(
-      name, desc || null, command, workDir || null, level
+    db.prepare('INSERT INTO doors (name, description, door_type, command, working_dir, telnet_host, telnet_port, security_level, enabled) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)').run(
+      name, desc || null, doorType, command, workDir || null, telnetHost, telnetPort, level
     );
-    logEvent('ADMIN', this.user.id, this.user.username, `Created door: ${name}`, this.connection.remoteAddress);
+    logEvent('ADMIN', this.user.id, this.user.username, `Created door: ${name} (${doorType})`, this.connection.remoteAddress);
 
     this.screen.messageBox('Success', 'Door created.', 'success');
     await this.connection.getChar();
@@ -625,10 +645,35 @@ export class SysopService {
     this.connection.write('\r\n');
     const desc = await this.connection.getInput(`Description [${(door.description || '').substring(0, 40)}]: `);
     this.connection.write('\r\n');
-    const command = await this.connection.getInput(`Command [${door.command}]: `);
+    const currentType = door.door_type || 'local';
+    const typeStr = await this.connection.getInput(`Type (L=Local, T=Telnet) [${currentType === 'telnet' ? 'T' : 'L'}]: `);
     this.connection.write('\r\n');
-    const workDir = await this.connection.getInput(`Working dir [${door.working_dir || ''}]: `);
-    this.connection.write('\r\n');
+    const doorType = typeStr.toUpperCase() === 'T' ? 'telnet'
+      : typeStr.toUpperCase() === 'L' ? 'local'
+      : currentType;
+
+    let command = door.command, workDir = door.working_dir;
+    let telnetHost = door.telnet_host, telnetPort = door.telnet_port || 2323;
+
+    if (doorType === 'telnet') {
+      const host = await this.connection.getInput(`Remote host [${door.telnet_host || ''}]: `);
+      this.connection.write('\r\n');
+      if (host) telnetHost = host;
+      const portStr = await this.connection.getInput(`Remote port [${telnetPort}]: `);
+      this.connection.write('\r\n');
+      if (portStr) telnetPort = parseInt(portStr) || telnetPort;
+      command = '';
+      workDir = null;
+    } else {
+      const cmd = await this.connection.getInput(`Command [${door.command || ''}]: `);
+      this.connection.write('\r\n');
+      if (cmd) command = cmd;
+      const wd = await this.connection.getInput(`Working dir [${door.working_dir || ''}]: `);
+      this.connection.write('\r\n');
+      if (wd) workDir = wd;
+      telnetHost = null;
+    }
+
     const levelStr = await this.connection.getInput(`Security level [${door.security_level}]: `);
     this.connection.write('\r\n');
     const enabledStr = await this.connection.getInput(`Enabled (Y/N) [${door.enabled ? 'Y' : 'N'}]: `);
@@ -639,11 +684,14 @@ export class SysopService {
     else if (enabledStr.toUpperCase() === 'N') enabled = 0;
 
     const db = getDatabase();
-    db.prepare('UPDATE doors SET name = ?, description = ?, command = ?, working_dir = ?, security_level = ?, enabled = ? WHERE id = ?').run(
+    db.prepare('UPDATE doors SET name = ?, description = ?, door_type = ?, command = ?, working_dir = ?, telnet_host = ?, telnet_port = ?, security_level = ?, enabled = ? WHERE id = ?').run(
       name || door.name,
       desc || door.description,
-      command || door.command,
-      workDir || door.working_dir,
+      doorType,
+      command,
+      workDir,
+      telnetHost,
+      telnetPort,
       parseInt(levelStr) || door.security_level,
       enabled,
       door.id

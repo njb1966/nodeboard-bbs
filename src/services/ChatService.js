@@ -243,9 +243,11 @@ export class ChatService {
     conn.write(colorText('  Commands: /quit /who /topic /rooms', 'yellow') + '\r\n');
     conn.write(colorText(BOX.D_HORIZONTAL.repeat(60), 'cyan', null, true) + '\r\n\r\n');
 
-    // Install chat message handler so incoming messages appear immediately
+    // Install chat message handler — clear the current input line before writing
+    // the incoming message, then re-show the user's prompt so typing isn't clobbered.
     conn.chatMessageHandler = (message) => {
-      conn.write(message);
+      const prompt = colorText(username + '> ', 'green', null, true);
+      conn.write('\r\x1b[2K' + message + prompt);
     };
 
     // Chat loop
@@ -462,7 +464,14 @@ export class ChatService {
     // We run two concurrent input loops. When either types /quit, we end both.
     let chatEnded = false;
 
-    const chatLoop = async (conn, username, otherConn) => {
+    // Write a message to a user mid-prompt: clear the current line, print the
+    // message, then re-display their prompt so typing isn't clobbered.
+    const writeToChat = (conn, otherUsername, text) => {
+      const prompt = colorText(otherUsername + '> ', 'green', null, true);
+      conn.write('\r\x1b[2K' + text + prompt);
+    };
+
+    const chatLoop = async (conn, username, otherConn, otherUsername) => {
       while (!chatEnded) {
         const line = await conn.getInput(colorText(username + '> ', 'green', null, true));
 
@@ -471,23 +480,24 @@ export class ChatService {
         if (line.toLowerCase() === '/quit' || line.toLowerCase() === '/q') {
           chatEnded = true;
           conn.write(colorText('\r\n*** Chat ended ***\r\n', 'yellow', null, true));
-          otherConn.write(colorText('\r\n*** ' + username + ' has left the chat ***\r\n', 'yellow', null, true));
-          otherConn.write(colorText('*** Chat ended ***\r\n', 'yellow', null, true));
+          writeToChat(otherConn, otherUsername,
+            colorText('\r\n*** ' + username + ' has left the chat ***\r\n', 'yellow', null, true) +
+            colorText('*** Chat ended ***\r\n', 'yellow', null, true)
+          );
           break;
         }
 
         if (line) {
-          // Show the message on the other user's screen
           const msg = colorText('<' + username + '> ', 'cyan', null, true) + colorText(line, 'white') + '\r\n';
-          otherConn.write(msg);
+          writeToChat(otherConn, otherUsername, msg);
         }
       }
     };
 
     // Run both loops concurrently — the first to /quit ends both
     await Promise.race([
-      chatLoop(myConn, myName, theirConn),
-      chatLoop(theirConn, theirName, myConn),
+      chatLoop(myConn, myName, theirConn, theirName),
+      chatLoop(theirConn, theirName, myConn, myName),
     ]);
 
     // Ensure chatEnded is set so the other loop will exit on its next iteration

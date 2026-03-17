@@ -11,6 +11,7 @@ import config from '../config/index.js';
 import { spawn } from 'child_process';
 import { existsSync, writeFileSync, mkdirSync } from 'fs';
 import { join } from 'path';
+import { createConnection } from 'net';
 
 export class DoorService {
   constructor(connection) {
@@ -103,20 +104,25 @@ export class DoorService {
     this.connection.write(colorText(`Time remaining: ${timeRemaining} minutes`, 'cyan', null, true) + '\r\n');
     this.connection.write(colorText('Starting game...', 'green', null, true) + '\r\n\r\n');
 
-    // Check if command exists
-    const doorPath = door.working_dir || config.paths.doors;
-    const fullCommand = join(doorPath, door.command);
-
-    if (!existsSync(fullCommand) && !existsSync(door.command)) {
-      this.screen.messageBox('Error', `Door executable not found: ${door.command}`, 'error');
-      await this.connection.getChar();
-      return;
+    // For local doors, verify the executable exists
+    if (door.door_type !== 'telnet') {
+      const doorPath = door.working_dir || config.paths.doors;
+      const fullCommand = join(doorPath, door.command);
+      if (!existsSync(fullCommand) && !existsSync(door.command)) {
+        this.screen.messageBox('Error', `Door executable not found: ${door.command}`, 'error');
+        await this.connection.getChar();
+        return;
+      }
     }
 
     const startTime = Date.now();
 
     try {
-      await this.executeDoor(door, timeRemaining);
+      if (door.door_type === 'telnet') {
+        await this.executeTelnetDoor(door, timeRemaining);
+      } else {
+        await this.executeDoor(door, timeRemaining);
+      }
 
       // Calculate time used and deduct
       const minutesUsed = Math.ceil((Date.now() - startTime) / 60000);
@@ -195,6 +201,52 @@ export class DoorService {
       proc.on('error', (err) => {
         this.connection.socket.removeListener('data', dataHandler);
         reject(err);
+      });
+    });
+  }
+
+  /**
+   * Proxy user connection to a remote Telnet door server.
+   */
+  async executeTelnetDoor(door, timeMinutes) {
+    return new Promise((resolve, reject) => {
+      const host = door.telnet_host;
+      const port = door.telnet_port || 2323;
+
+      const remote = createConnection({ host, port }, () => {
+        // Pipe remote → user
+        remote.on('data', (data) => {
+          this.connection.socket.write(data);
+        });
+
+        // Pipe user → remote
+        const dataHandler = (data) => {
+          remote.write(data);
+        };
+        this.connection.socket.on('data', dataHandler);
+
+        // Enforce time limit
+        const timeoutMs = timeMinutes * 60 * 1000;
+        const timer = setTimeout(() => {
+          this.connection.write('\r\n\r\n' + colorText('[ Time limit reached — disconnecting from door ]', 'yellow', null, true) + '\r\n');
+          remote.destroy();
+        }, timeoutMs);
+
+        remote.on('close', () => {
+          clearTimeout(timer);
+          this.connection.socket.removeListener('data', dataHandler);
+          resolve();
+        });
+
+        remote.on('error', (err) => {
+          clearTimeout(timer);
+          this.connection.socket.removeListener('data', dataHandler);
+          reject(err);
+        });
+      });
+
+      remote.on('error', (err) => {
+        reject(new Error(`Cannot connect to ${host}:${port} — ${err.message}`));
       });
     });
   }
